@@ -27,10 +27,10 @@ No release yet, so take a CI build. The paths below are confirmed working — th
 loads and appears in OBS's audio filter list with them.
 
 1. Go to the [Actions tab](https://github.com/roychri/obs-openai-transcribe/actions) and
-   open a run whose **Build for Windows** job succeeded. Do not filter on the run's overall
-   status: the format check is red for reasons unrelated to the binary, so a run can show
-   ✗ and still have a perfectly good artifact. Expand the run, confirm the Windows job has
-   a green tick, then scroll to **Artifacts** at the bottom of the page.
+   open the most recent run with a green tick. Scroll to **Artifacts** at the bottom of the
+   page. (If a run shows ✗, check whether it is only the format check that failed — the
+   **Build for Windows** job having a green tick is what decides whether the artifact is
+   usable.)
 2. Download `obs-openai-transcribe-<version>-windows-x64-<hash>`.
 3. **It is a zip inside a zip.** GitHub wraps every artifact, so unzip twice. There is no
    installer `.exe`. The inner zip contains:
