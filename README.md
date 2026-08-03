@@ -102,7 +102,11 @@ was created.
 ### General
 
 **Transcription provider** is `OpenAI (gpt-live-transcribe)` — the only one in this fork.
-**Secret Key** is unused by OpenAI; leave it blank.
+**API Key** is your OpenAI secret key and is the only credential needed.
+
+(Builds before 2026-08-03 also showed a **Secret Key** field. That was inherited from
+CloudVocal, where providers like Naver Clova and AWS need a key/secret *pair*. OpenAI
+authenticates with a single bearer token, so the field did nothing and has been removed.)
 
 ### Other groups
 

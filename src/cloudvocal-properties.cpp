@@ -281,9 +281,6 @@ void add_general_group_properties(obs_properties_t *ppts)
 	// add text input for API Key
 	obs_properties_add_text(general_group, "transcription_cloud_provider_api_key",
 				MT_("transcription_cloud_provider_api_key"), OBS_TEXT_PASSWORD);
-	// add text input for API Secret Key
-	obs_properties_add_text(general_group, "transcription_cloud_provider_secret_key",
-				MT_("transcription_cloud_provider_secret_key"), OBS_TEXT_PASSWORD);
 
 	add_openai_group_properties(ppts);
 }

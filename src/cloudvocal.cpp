@@ -220,7 +220,6 @@ void cloudvocal_update(void *data, obs_data_t *s)
 	std::string new_language = transcription_language_select;
 	std::string new_cloud_provider_api_key = obs_data_get_string(s, "transcription_cloud_provider_api_key");
 	std::string new_cloud_provider_selection = obs_data_get_string(s, "transcription_cloud_provider");
-	std::string new_cloud_provider_secret_key = obs_data_get_string(s, "transcription_cloud_provider_secret_key");
 
 	// OpenAI context options. These are baked into the session at connect time, so a
 	// change to any of them has to restart the provider to take effect.
@@ -232,15 +231,13 @@ void cloudvocal_update(void *data, obs_data_t *s)
 	gf->openai_idle_timeout_sec = (int)obs_data_get_int(s, "openai_idle_timeout");
 
 	if (gf->cloud_provider_selection != new_cloud_provider_selection || gf->language != new_language ||
-	    gf->cloud_provider_api_key != new_cloud_provider_api_key ||
-	    gf->cloud_provider_secret_key != new_cloud_provider_secret_key || gf->openai_delay != new_openai_delay ||
+	    gf->cloud_provider_api_key != new_cloud_provider_api_key || gf->openai_delay != new_openai_delay ||
 	    gf->openai_prompt != new_openai_prompt || gf->openai_keywords != new_openai_keywords) {
 		// cloud provider selection, api key or session options changed
 		obs_log(gf->log_level, "cloud provider selection, language, keys or options changed");
 		gf->cloud_provider_selection = new_cloud_provider_selection;
 		gf->language = new_language;
 		gf->cloud_provider_api_key = new_cloud_provider_api_key;
-		gf->cloud_provider_secret_key = new_cloud_provider_secret_key;
 		gf->openai_delay = new_openai_delay;
 		gf->openai_prompt = new_openai_prompt;
 		gf->openai_keywords = new_openai_keywords;

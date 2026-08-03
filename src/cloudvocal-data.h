@@ -85,7 +85,6 @@ struct cloudvocal_data {
 	std::shared_ptr<CloudProvider> cloud_provider;
 	std::string cloud_provider_selection;
 	std::string cloud_provider_api_key;
-	std::string cloud_provider_secret_key;
 	// Rate the resampler currently targets; kept in sync with the active provider.
 	int transcription_sample_rate;
 
