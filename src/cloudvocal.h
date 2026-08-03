@@ -20,9 +20,10 @@ void cloudvocal_show(void *data);
 void cloudvocal_hide(void *data);
 
 const char *const PLUGIN_INFO_TEMPLATE =
-	"<a href=\"https://github.com/locaal-ai/cloudvocal/\">CloudVocal</a> ({{plugin_version}}) by "
-	"<a href=\"https://github.com/locaal-ai\">Locaal AI</a> ❤️ "
-	"<a href=\"https://locaal.ai\">Support & Follow</a>";
+	"<a href=\"https://github.com/roychri/obs-openai-transcribe/\">OpenAI Live Transcription</a> "
+	"({{plugin_version}}) - a fork of "
+	"<a href=\"https://github.com/locaal-ai/cloudvocal\">CloudVocal</a> by "
+	"<a href=\"https://github.com/locaal-ai\">Locaal AI</a>";
 
 #ifdef __cplusplus
 }

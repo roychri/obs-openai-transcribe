@@ -11,7 +11,9 @@
 
 #include "cloud-translation/translation-cloud.h"
 
-#define TRANSCRIPTION_SAMPLE_RATE 16000
+// Fallback only. The real rate comes from the selected provider (CloudProvider::sampleRate)
+// and the resampler is rebuilt whenever that changes.
+#define DEFAULT_TRANSCRIPTION_SAMPLE_RATE 24000
 
 // Audio packet info
 struct cloudvocal_audio_info {
@@ -84,6 +86,14 @@ struct cloudvocal_data {
 	std::string cloud_provider_selection;
 	std::string cloud_provider_api_key;
 	std::string cloud_provider_secret_key;
+	// Rate the resampler currently targets; kept in sync with the active provider.
+	int transcription_sample_rate;
+
+	// OpenAI gpt-live-transcribe options
+	std::string openai_delay;    // minimal | low | medium | high | xhigh
+	std::string openai_prompt;   // free-form description of the recording
+	std::string openai_keywords; // domain terms, one per line
+	int openai_idle_timeout_sec; // drop the billed socket after this much silence
 
 	std::map<std::string, std::string> filter_words_replace;
 

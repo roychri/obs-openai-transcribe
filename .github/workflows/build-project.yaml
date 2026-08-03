@@ -75,6 +75,10 @@ jobs:
     name: Build for macOS 🍏
     runs-on: macos-14
     needs: check-event
+    # Disabled: this fork targets Windows x64 only. macOS runners bill at a 10x
+    # multiplier, so leaving this on burns the whole Actions allowance on a build
+    # nobody installs. Re-enable by removing this line if macOS support is wanted.
+    if: false
     defaults:
       run:
         shell: zsh --no-rcs --errexit --pipefail {0}

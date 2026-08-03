@@ -14,6 +14,8 @@
 // #include "ui/filter-replace-dialog.h"
 // #include "ui/filter-replace-utils.h"
 
+void add_openai_group_properties(obs_properties_t *ppts);
+
 bool translation_cloud_provider_selection_callback(obs_properties_t *props, obs_property_t *p,
 						   obs_data_t *s)
 {
@@ -279,15 +281,8 @@ void add_general_group_properties(obs_properties_t *ppts)
 		general_group, "transcription_cloud_provider", MT_("transcription_cloud_provider"),
 		OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
 	// add the available cloud providers
-	obs_property_list_add_string(transcription_cloud_provider_select_list, MT_("Clova"),
-				     "clova");
-	obs_property_list_add_string(transcription_cloud_provider_select_list, MT_("Google"),
-				     "google");
-	obs_property_list_add_string(transcription_cloud_provider_select_list, MT_("RevAI"),
-				     "revai");
-	obs_property_list_add_string(transcription_cloud_provider_select_list, MT_("Deepgram"),
-				     "deepgram");
-	// obs_property_list_add_string(transcription_cloud_provider_select_list, MT_("AWS"), "aws");
+	obs_property_list_add_string(transcription_cloud_provider_select_list,
+				     MT_("OpenAI-gpt-live-transcribe"), "openai");
 
 	obs_property_t *subs_output =
 		obs_properties_add_list(general_group, "subtitle_sources", MT_("subtitle_sources"),
@@ -313,6 +308,37 @@ void add_general_group_properties(obs_properties_t *ppts)
 	// add text input for API Secret Key
 	obs_properties_add_text(general_group, "transcription_cloud_provider_secret_key",
 				MT_("transcription_cloud_provider_secret_key"), OBS_TEXT_PASSWORD);
+
+	add_openai_group_properties(ppts);
+}
+
+void add_openai_group_properties(obs_properties_t *ppts)
+{
+	obs_properties_t *openai_group = obs_properties_create();
+	obs_properties_add_group(ppts, "openai_group", MT_("openai_group"), OBS_GROUP_NORMAL,
+				 openai_group);
+
+	// Latency/stability trade-off. Lower tiers emit sooner but revise more often.
+	obs_property_t *delay = obs_properties_add_list(openai_group, "openai_delay",
+						       MT_("openai_delay"), OBS_COMBO_TYPE_LIST,
+						       OBS_COMBO_FORMAT_STRING);
+	obs_property_list_add_string(delay, MT_("openai_delay_minimal"), "minimal");
+	obs_property_list_add_string(delay, MT_("openai_delay_low"), "low");
+	obs_property_list_add_string(delay, MT_("openai_delay_medium"), "medium");
+	obs_property_list_add_string(delay, MT_("openai_delay_high"), "high");
+	obs_property_list_add_string(delay, MT_("openai_delay_xhigh"), "xhigh");
+
+	// Free-form description of the scene - improves accuracy on in-context terms.
+	obs_properties_add_text(openai_group, "openai_prompt", MT_("openai_prompt"),
+				OBS_TEXT_MULTILINE);
+
+	// Domain vocabulary, one term per line.
+	obs_properties_add_text(openai_group, "openai_keywords", MT_("openai_keywords"),
+				OBS_TEXT_MULTILINE);
+
+	// Billing is by session wall-clock, so an idle socket costs money.
+	obs_properties_add_int_slider(openai_group, "openai_idle_timeout",
+				      MT_("openai_idle_timeout"), 0, 300, 5);
 }
 
 void add_partial_group_properties(obs_properties_t *ppts)
@@ -395,7 +421,11 @@ void cloudvocal_defaults(obs_data_t *s)
 	obs_data_set_default_bool(s, "log_words", false);
 	obs_data_set_default_bool(s, "caption_to_stream", false);
 	obs_data_set_default_string(s, "transcription_language_select", "__en__");
-	obs_data_set_default_string(s, "transcription_cloud_provider", "clova");
+	obs_data_set_default_string(s, "transcription_cloud_provider", "openai");
+	obs_data_set_default_string(s, "openai_delay", "low");
+	obs_data_set_default_string(s, "openai_prompt", "");
+	obs_data_set_default_string(s, "openai_keywords", "");
+	obs_data_set_default_int(s, "openai_idle_timeout", 30);
 	obs_data_set_default_string(s, "subtitle_sources", "none");
 	obs_data_set_default_bool(s, "process_while_muted", false);
 	obs_data_set_default_bool(s, "subtitle_save_srt", false);

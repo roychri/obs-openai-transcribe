@@ -35,8 +35,6 @@ if(ENABLE_QT)
 endif()
 
 include(cmake/BuildDependencies.cmake)
-include(cmake/BuildClovaAPIs.cmake)
-include(cmake/BuildGoogleAPIs.cmake)
 include(cmake/FetchNlohmannJSON.cmake)
 
 set(USE_SYSTEM_CURL
@@ -63,15 +61,11 @@ target_sources(
           src/cloudvocal-properties.cpp
           src/language-codes/language-codes.cpp
           src/cloud-providers/cloud-provider.cpp
-          src/cloud-providers/clova/clova-provider.cpp
-          src/cloud-providers/deepgram/deepgram-provider.cpp
-          src/cloud-providers/google/google-provider.cpp
-          src/cloud-providers/revai/revai-provider.cpp
+          src/cloud-providers/openai/openai-provider.cpp
           src/utils/ssl-utils.cpp
           src/utils/curl-helper.cpp
           src/timed-metadata/timed-metadata-utils.cpp)
 
 add_subdirectory(src/cloud-translation)
-add_subdirectory(src/cloud-providers/aws)
 
 set_target_properties_plugin(${CMAKE_PROJECT_NAME} PROPERTIES OUTPUT_NAME ${_name})

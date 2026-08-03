@@ -8,6 +8,38 @@
 #include <vector>
 #include "plugin-support.h"
 
+bool ensure_resampler(cloudvocal_data *gf, int target_sample_rate)
+{
+	if (gf->resampler != nullptr && gf->transcription_sample_rate == target_sample_rate) {
+		return true;
+	}
+
+	if (gf->resampler != nullptr) {
+		obs_log(gf->log_level, "rebuilding resampler for %d Hz (was %d Hz)",
+			target_sample_rate, gf->transcription_sample_rate);
+		audio_resampler_destroy(gf->resampler);
+		gf->resampler = nullptr;
+	}
+
+	struct resample_info src, dst;
+	src.samples_per_sec = gf->sample_rate;
+	src.format = AUDIO_FORMAT_FLOAT_PLANAR;
+	src.speakers = convert_speaker_layout((uint8_t)gf->channels);
+
+	dst.samples_per_sec = target_sample_rate;
+	dst.format = AUDIO_FORMAT_FLOAT_PLANAR;
+	dst.speakers = convert_speaker_layout((uint8_t)1);
+
+	gf->resampler = audio_resampler_create(&dst, &src);
+	if (gf->resampler == nullptr) {
+		obs_log(LOG_ERROR, "Failed to create resampler for %d Hz", target_sample_rate);
+		return false;
+	}
+
+	gf->transcription_sample_rate = target_sample_rate;
+	return true;
+}
+
 int get_data_from_buf_and_resample(cloudvocal_data *gf, uint64_t &start_timestamp_offset_ns,
 				   uint64_t &end_timestamp_offset_ns)
 {
@@ -95,7 +127,7 @@ int get_data_from_buf_and_resample(cloudvocal_data *gf, uint64_t &start_timestam
 	}
 
 	{
-		// resample to 16kHz
+		// resample to the provider's rate
 		float *resampled_16khz[8];
 		uint32_t resampled_16khz_frames;
 		uint64_t ts_offset;
@@ -120,7 +152,7 @@ int get_data_from_buf_and_resample(cloudvocal_data *gf, uint64_t &start_timestam
 		obs_log(gf->log_level,
 			"resampled: %d channels, %d frames, %f ms, current size: %lu bytes",
 			(int)gf->channels, (int)resampled_16khz_frames,
-			(float)resampled_16khz_frames / TRANSCRIPTION_SAMPLE_RATE * 1000.0f,
+			(float)resampled_16khz_frames / gf->transcription_sample_rate * 1000.0f,
 			gf->resampled_buffer.size);
 #endif
 	}

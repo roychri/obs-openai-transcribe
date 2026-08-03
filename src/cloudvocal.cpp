@@ -17,6 +17,7 @@
 #include "cloudvocal-data.h"
 #include "cloudvocal-callbacks.h"
 #include "cloudvocal-utils.h"
+#include "cloudvocal-processing.h"
 #include "cloud-providers/cloud-provider.h"
 
 void set_source_signals(cloudvocal_data *gf, obs_source_t *parent_source)
@@ -228,16 +229,30 @@ void cloudvocal_update(void *data, obs_data_t *s)
 	std::string new_cloud_provider_secret_key =
 		obs_data_get_string(s, "transcription_cloud_provider_secret_key");
 
+	// OpenAI context options. These are baked into the session at connect time, so a
+	// change to any of them has to restart the provider to take effect.
+	std::string new_openai_delay = obs_data_get_string(s, "openai_delay");
+	std::string new_openai_prompt = obs_data_get_string(s, "openai_prompt");
+	std::string new_openai_keywords = obs_data_get_string(s, "openai_keywords");
+
+	// Idle timeout is read live - it does not need a reconnect.
+	gf->openai_idle_timeout_sec = (int)obs_data_get_int(s, "openai_idle_timeout");
+
 	if (gf->cloud_provider_selection != new_cloud_provider_selection ||
 	    gf->language != new_language ||
 	    gf->cloud_provider_api_key != new_cloud_provider_api_key ||
-	    gf->cloud_provider_secret_key != new_cloud_provider_secret_key) {
-		// cloud provider selection or api key changed
-		obs_log(gf->log_level, "cloud provider selection, language or keys changed");
+	    gf->cloud_provider_secret_key != new_cloud_provider_secret_key ||
+	    gf->openai_delay != new_openai_delay || gf->openai_prompt != new_openai_prompt ||
+	    gf->openai_keywords != new_openai_keywords) {
+		// cloud provider selection, api key or session options changed
+		obs_log(gf->log_level, "cloud provider selection, language, keys or options changed");
 		gf->cloud_provider_selection = new_cloud_provider_selection;
 		gf->language = new_language;
 		gf->cloud_provider_api_key = new_cloud_provider_api_key;
 		gf->cloud_provider_secret_key = new_cloud_provider_secret_key;
+		gf->openai_delay = new_openai_delay;
+		gf->openai_prompt = new_openai_prompt;
+		gf->openai_keywords = new_openai_keywords;
 
 		// restart the cloud provider
 		restart_cloud_provider(gf);
@@ -300,18 +315,9 @@ void *cloudvocal_create(obs_data_t *settings, obs_source_t *filter)
 	obs_log(gf->log_level, "channels %d, sample_rate %d", (int)gf->channels, gf->sample_rate);
 
 	obs_log(gf->log_level, "setup audio resampler");
-	struct resample_info src, dst;
-	src.samples_per_sec = gf->sample_rate;
-	src.format = AUDIO_FORMAT_FLOAT_PLANAR;
-	src.speakers = convert_speaker_layout((uint8_t)gf->channels);
-
-	dst.samples_per_sec = TRANSCRIPTION_SAMPLE_RATE;
-	dst.format = AUDIO_FORMAT_FLOAT_PLANAR;
-	dst.speakers = convert_speaker_layout((uint8_t)1);
-
-	gf->resampler = audio_resampler_create(&dst, &src);
-	if (!gf->resampler) {
-		obs_log(LOG_ERROR, "Failed to create resampler");
+	// Provisional rate only - restart_cloud_provider() rebuilds this to whatever the
+	// selected provider actually wants.
+	if (!ensure_resampler(gf, DEFAULT_TRANSCRIPTION_SAMPLE_RATE)) {
 		gf->active = false;
 		return nullptr;
 	}

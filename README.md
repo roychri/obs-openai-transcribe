@@ -1,125 +1,79 @@
-# CloudVocal - Professional Cloud AI Transcription & Translation Plugin
+# OBS OpenAI Live Transcription
 
-<div align="center">
+Real-time OBS captions powered by OpenAI's [`gpt-live-transcribe`](https://developers.openai.com/api/docs/models/gpt-live-transcribe).
 
-[![GitHub](https://img.shields.io/github/license/locaal-ai/cloudvocal)](https://github.com/locaal-ai/cloudvocal/blob/main/LICENSE)
-[![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/locaal-ai/cloudvocal/push.yaml)](https://github.com/locaal-ai/cloudvocal/actions/workflows/push.yaml)
-[![Total downloads](https://img.shields.io/github/downloads/locaal-ai/cloudvocal/total)](https://github.com/locaal-ai/cloudvocal/releases)
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/locaal-ai/cloudvocal)](https://github.com/locaal-ai/cloudvocal/releases)
-[![GitHub stars](https://badgen.net/github/stars/locaal-ai/cloudvocal)](https://github.com/locaal-ai/cloudvocal/stargazers/)
-[![Discord](https://img.shields.io/discord/1200229425141252116)](https://discord.gg/KbjGU2vvUz)
-<br/>
-Download:</br>
-<a href="https://github.com/locaal-ai/cloudvocal/releases/latest/download/cloudvocal-0.0.1-windows-x64-Installer.exe"><img src="https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white" /></a>
-<a href="https://github.com/locaal-ai/cloudvocal/releases/latest/download/cloudvocal-0.0.1-macos-universal.pkg"><img src="https://img.shields.io/badge/mac-000000?style=for-the-badge" /></a>
-<a href="https://github.com/locaal-ai/cloudvocal/releases/latest/download/cloudvocal-0.0.1-x86_64-linux-gnu.deb"><img src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black"/></a>
-</div>
+This is a fork of [locaal-ai/cloudvocal](https://github.com/locaal-ai/cloudvocal), stripped
+down to a single provider. All the OBS-side plumbing — audio filter, resampling, caption
+delivery, SRT writing, CEA-608 embedding into the RTMP stream — is CloudVocal's work.
+GPLv2, same as upstream.
 
-## Introduction
+## What it does
 
-CloudVocal brings professional-grade cloud transcription and translation to your OBS streams and recordings. Powered by industry-leading cloud providers, it delivers exceptional accuracy and real-time performance for your live streaming needs. ✅ Professional-grade accuracy, ✅ support for 100+ languages, ✅ enterprise-level reliability, and ✅ blazing-fast performance!
+Adds an audio filter that streams your source's audio to OpenAI over a WebSocket and
+renders the returned transcript into a text source, a file, and/or the outgoing stream's
+caption track.
 
-CloudVocal integrates seamlessly with leading cloud providers to deliver enterprise-grade speech recognition and translation services. Simply configure your API credentials and start streaming with professional-quality captions and translations.
+- Partial captions that grow as you speak, finalised on each utterance
+- **Latency tier** (`minimal` → `xhigh`) trading first-word speed against caption stability
+- **Context** and **keywords** fields — the model uses these to get proper nouns, jargon
+  and product names right, which is the main reason to prefer it over Whisper
+- Caption output to a text source, `.txt`/`.srt` file, or embedded CEA-608 for
+  YouTube/Twitch
 
-## Features
+## Cost, and why the idle timeout matters
 
-Current Features:
-- Professional-grade transcription with industry-leading accuracy
-- Providers: [Google Cloud](https://cloud.google.com/speech-to-text/docs/), [Naver Clova](https://developers.naver.com/docs/clova/api/), [Rev AI](https://www.rev.ai/), [Deepgram](https://developers.deepgram.com/docs/introduction), [AWS Transcribe](https://docs.aws.amazon.com/transcribe/latest/APIReference/Welcome.html) (upcoming)
-- Real-time translation using enterprise cloud translation services
-- Translation providers: [Google Cloud](https://cloud.google.com/translate/docs/reference/rest/), [Naver Papago](https://developers.naver.com/docs/papago/), [DeepL](https://www.deepl.com/en/products/api), [AWS Translate](https://aws.amazon.com/translate/), [Anthropic Claude](https://www.anthropic.com/api), [OpenAI](https://openai.com/api/)
-- Streaming-optimized performance with minimal latency
-- Caption output in multiple formats (.txt, .srt)
-- Sync'ed captions with OBS recording timestamps
-- Direct streaming to platforms (YouTube, Twitch) with embedded captions
-- Partial transcriptions for a streaming-captions experience
+`gpt-live-transcribe` bills **$0.017 per minute of session audio** — roughly **$1.02/hour**
+— and it bills by how long the socket is open, *not* by how much speech it hears.
 
-Roadmap:
-- Additional cloud providers and services (e.g. Microsoft Azure)
-- Custom vocabulary and pronunciation support
-- Professional terminology handling for specific industries
-- Advanced text filtering and customization options
-- Speaker diarization for multi-speaker environments
-- Advanced profanity filtering options
-- Custom translation glossaries
-- Additional subtitle format support
-- Enhanced analytics and caption quality metrics
+This plugin therefore opens the connection lazily on first audio and drops it after
+`Disconnect after idle` seconds of silence (default 30). Set it to 0 to keep the socket
+open permanently, and expect to pay for every minute the filter is enabled.
 
-## Usage
+## Configuration
 
-Tutorial videos and screenshots - coming soon!
+1. Add **OpenAI Live Transcription** as a filter on an audio source
+2. Paste your OpenAI API key into **API Key**
+3. Pick a text source in **Output source** (one is created for you if you have none)
+4. Optionally fill in **Context** (what the stream is about) and **Keywords** (names,
+   games, jargon — one per line)
 
-## Download and Installation
-
-Check out the [latest releases](https://github.com/locaal-ai/cloudvocal/releases) for downloads and install instructions.
-
-### Configuration
-
-1. Download and install the appropriate version for your operating system
-1. Add CloudVocal as a filter to your audio source
-1. Configure your cloud provider credentials in the plugin settings
-1. Select your desired transcription and translation options
-1. Select an output text source for the captions and translations, send the captions to the stream or a file
+The API key is stored by OBS in its scene-collection JSON in plain text, like every other
+OBS plugin credential. Treat that file accordingly.
 
 ## Building
 
-The plugin can be built on Windows, macOS, and Linux platforms. The build process is straightforward as all processing happens in the cloud.
+Only **Windows x64** is built by CI; the macOS job is disabled (see
+`.github/workflows/build-project.yaml`) because this fork does not target it.
 
-Both Mac OSX and Linux rely on Conan for dependencies. Install Conan, e.g. `pip install conan`, and install the dependencies:
-```sh
-$ conan profile detect --force
-$ conan install . --output-folder=./build_conan --build=missing -g CMakeDeps
-```
+Dependencies come from Conan — Boost (for Beast's WebSocket client), OpenSSL, and zlib:
 
-### Mac OSX
-
-Build the plugin:
-
-```sh
-$ ./.github/scripts/build-macos --config Release
-```
-
-You may want to change to `RelWithDebInfo` for a debug build.
-
-If you're developing the plugin, I find this command to be useful for direct deploymet into OBS after building:
-
-```sh
-$ ./.github/scripts/build-macos --skip-deps && cp -R release/RelWithDebInfo/*.plugin ~/Library/Application\ Support/obs-studio/plugins/
-```
-
-### Linux
-
-Build the plugin:
-```sh
-$ ./.github/scripts/build-linux
-```
-
-### Windows
-
-Windows also needs Conan for OpenSSL. Run `conan` to get the dependency (make sure to run `conan` on the `conanfile_win.txt`):
 ```powershell
 > pip install conan
 > conan profile detect --force
-> conan install .\conanfile_win.txt --output-folder=./build_conan --build=missing -g CMakeDeps
+> conan install . --output-folder=./build_conan --build=missing -g CMakeDeps
 ```
 
-Build the plugin:
+Build:
 
 ```powershell
 > .\.github\scripts\Build-Windows.ps1 -Configuration Release
 ```
 
-If you're developing the plugin, I find this command to be useful for direct deploymet into OBS after building:
+Build and deploy straight into OBS while developing:
 
 ```powershell
-> pwsh -ExecutionPolicy Bypass -File .\.github\scripts\Build-Windows.ps1 -Configuration RelWithDebInfo -SkipDeps && Copy-Item -Force -Recurse .\release\RelWithDebInfo\* "C:\Program Files\obs-studio\"
+> pwsh -ExecutionPolicy Bypass -File .\.github\scripts\Build-Windows.ps1 -Configuration RelWithDebInfo -SkipDeps
+> Copy-Item -Force -Recurse .\release\RelWithDebInfo\* "C:\Program Files\obs-studio\"
 ```
 
-## Contributing
+Linux and macOS build scripts are inherited from upstream and should still work, but are
+untested in this fork.
 
-We welcome contributions from the community!
-Please fork the repository and submit a pull request with your changes. We will review and merge your changes as soon as possible.
+## Status
+
+Not yet run against the live API. See `PLAN_OPENAI_FORK.md` for what is done and what
+remains.
 
 ## License
 
-This project is licensed under the GPLv2 License - see the [LICENSE](LICENSE) file for details.
+GPLv2 — see [LICENSE](LICENSE). Inherited from CloudVocal.

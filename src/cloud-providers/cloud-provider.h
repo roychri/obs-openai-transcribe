@@ -27,6 +27,10 @@ public:
 
 	virtual bool init() = 0;
 
+	// Sample rate the provider expects its audio in. The filter builds its resampler
+	// from this, so it must be known before start().
+	virtual int sampleRate() const = 0;
+
 	void start()
 	{
 		stop_requested = false;
@@ -59,6 +63,10 @@ protected:
 	virtual void readResultsFromTranscription() = 0;
 	virtual void shutdown() = 0;
 
+	// Called periodically on the audio thread when no audio has arrived. Providers that
+	// bill by connection wall-clock use this to drop an idle connection.
+	virtual void onIdleTick() {}
+
 	void processAudio()
 	{
 		// Initialize the cloud provider
@@ -88,11 +96,20 @@ protected:
 
 			// sleep until the next audio packet is ready
 			// wait for notificaiton from the audio buffer condition variable
-			std::unique_lock<std::mutex> lock(gf->input_buffers_mutex);
-			gf->input_buffers_cv.wait(lock, [this] {
-				return !(gf->input_buffers[0]).empty() || !running ||
-				       stop_requested;
-			});
+			{
+				std::unique_lock<std::mutex> lock(gf->input_buffers_mutex);
+				// Bounded wait so idle providers still get a periodic tick even
+				// when no audio ever arrives (muted source, inactive scene).
+				gf->input_buffers_cv.wait_for(
+					lock, std::chrono::milliseconds(250), [this] {
+						return !(gf->input_buffers[0]).empty() || !running ||
+						       stop_requested;
+					});
+			}
+
+			if (running && !stop_requested) {
+				onIdleTick();
+			}
 		}
 
 		// Shutdown the cloud provider

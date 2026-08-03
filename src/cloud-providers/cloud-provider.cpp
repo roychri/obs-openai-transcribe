@@ -1,25 +1,13 @@
 #include "cloud-provider.h"
 #include "cloudvocal-callbacks.h"
-#include "clova/clova-provider.h"
-#include "google/google-provider.h"
-#include "aws/aws_provider.h"
-#include "revai/revai-provider.h"
-#include "deepgram/deepgram-provider.h"
+#include "openai/openai-provider.h"
 
 std::shared_ptr<CloudProvider> createCloudProvider(const std::string &providerType,
 						   CloudProvider::TranscriptionCallback callback,
 						   cloudvocal_data *gf)
 {
-	if (providerType == "clova") {
-		return std::make_shared<ClovaProvider>(callback, gf);
-	} else if (providerType == "google") {
-		return std::make_unique<GoogleProvider>(callback, gf);
-	} else if (providerType == "aws") {
-		return std::make_unique<AWSProvider>(callback, gf);
-	} else if (providerType == "revai") {
-		return std::make_unique<RevAIProvider>(callback, gf);
-	} else if (providerType == "deepgram") {
-		return std::make_unique<DeepgramProvider>(callback, gf);
+	if (providerType == "openai") {
+		return std::make_shared<OpenAIProvider>(callback, gf);
 	}
 
 	return nullptr; // Return nullptr if no matching provider is found
@@ -45,5 +33,14 @@ void restart_cloud_provider(cloudvocal_data *gf)
 		gf->active = false;
 		return;
 	}
+
+	// The provider dictates the audio rate, so the resampler has to be rebuilt before
+	// any audio is handed to it.
+	if (!ensure_resampler(gf, gf->cloud_provider->sampleRate())) {
+		gf->cloud_provider = nullptr;
+		gf->active = false;
+		return;
+	}
+
 	gf->cloud_provider->start();
 }
