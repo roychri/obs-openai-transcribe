@@ -3,7 +3,11 @@ include(FetchContent)
 set(LibCurl_VERSION "8.4.1")
 set(LibCurl_BASEURL "https://github.com/occ-ai/obs-ai-libcurl-dep/releases/download/${LibCurl_VERSION}")
 
-if(${CMAKE_BUILD_TYPE} STREQUAL Release OR ${CMAKE_BUILD_TYPE} STREQUAL RelWithDebInfo)
+# CMAKE_BUILD_TYPE is empty under multi-config generators (Visual Studio), which the
+# current plugintemplate uses on Windows. Dereferencing it there yields a malformed
+# if(), so compare the variable by name and default an unset build type to Release.
+if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL
+                                                                 "RelWithDebInfo")
   set(LibCurl_BUILD_TYPE Release)
 else()
   set(LibCurl_BUILD_TYPE Debug)
