@@ -10,8 +10,7 @@
 
 using json = nlohmann::json;
 
-AWSTranslator::AWSTranslator(const std::string &access_key, const std::string &secret_key,
-			     const std::string &region)
+AWSTranslator::AWSTranslator(const std::string &access_key, const std::string &secret_key, const std::string &region)
 	: access_key_(access_key),
 	  secret_key_(secret_key),
 	  region_(region),
@@ -40,9 +39,8 @@ std::string AWSTranslator::sha256(const std::string &str) const
 // Helper function for HMAC-SHA256
 std::string AWSTranslator::hmacSha256(const std::string &key, const std::string &data) const
 {
-	unsigned char *digest = HMAC(EVP_sha256(), key.c_str(), key.length(),
-				     (unsigned char *)data.c_str(), data.length(), nullptr,
-				     nullptr);
+	unsigned char *digest = HMAC(EVP_sha256(), key.c_str(), key.length(), (unsigned char *)data.c_str(),
+				     data.length(), nullptr, nullptr);
 
 	char hex[SHA256_DIGEST_LENGTH * 2 + 1];
 	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
@@ -60,8 +58,7 @@ std::string AWSTranslator::createSigningKey(const std::string &date_stamp) const
 	return hmacSha256(k_service, "aws4_request");
 }
 
-std::string AWSTranslator::calculateSignature(const std::string &string_to_sign,
-					      const std::string &signing_key) const
+std::string AWSTranslator::calculateSignature(const std::string &string_to_sign, const std::string &signing_key) const
 {
 	return hmacSha256(signing_key, string_to_sign);
 }
@@ -80,8 +77,7 @@ std::string AWSTranslator::getSignedHeaders(const std::map<std::string, std::str
 std::string AWSTranslator::translate(const std::string &text, const std::string &target_lang,
 				     const std::string &source_lang)
 {
-	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(),
-								 curl_easy_cleanup);
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), curl_easy_cleanup);
 
 	if (!curl) {
 		throw TranslationError("Failed to initialize CURL session");
@@ -93,8 +89,7 @@ std::string AWSTranslator::translate(const std::string &text, const std::string 
 		// Create request body
 		json request_body = {{"Text", text},
 				     {"TargetLanguageCode", target_lang},
-				     {"SourceLanguageCode",
-				      source_lang == "auto" ? "auto" : source_lang}};
+				     {"SourceLanguageCode", source_lang == "auto" ? "auto" : source_lang}};
 		std::string payload = request_body.dump();
 
 		// Get current timestamp
@@ -120,8 +115,7 @@ std::string AWSTranslator::translate(const std::string &text, const std::string 
 				  << "\n"  // canonical query string (empty)
 				  << "content-type:" << headers["content-type"] << "\n"
 				  << "host:" << headers["host"] << "\n"
-				  << "x-amz-content-sha256:" << headers["x-amz-content-sha256"]
-				  << "\n"
+				  << "x-amz-content-sha256:" << headers["x-amz-content-sha256"] << "\n"
 				  << "x-amz-date:" << headers["x-amz-date"] << "\n"
 				  << "\n" // end of headers
 				  << getSignedHeaders(headers) << "\n"
@@ -131,8 +125,7 @@ std::string AWSTranslator::translate(const std::string &text, const std::string 
 		std::stringstream string_to_sign;
 		string_to_sign << ALGORITHM << "\n"
 			       << amz_date << "\n"
-			       << date_stamp << "/" << region_ << "/" << SERVICE_NAME
-			       << "/aws4_request\n"
+			       << date_stamp << "/" << region_ << "/" << SERVICE_NAME << "/aws4_request\n"
 			       << sha256(canonical_request.str());
 
 		// Calculate signature
@@ -141,8 +134,8 @@ std::string AWSTranslator::translate(const std::string &text, const std::string 
 
 		// Create Authorization header
 		std::stringstream auth_header;
-		auth_header << ALGORITHM << " Credential=" << access_key_ << "/" << date_stamp
-			    << "/" << region_ << "/" << SERVICE_NAME << "/aws4_request,"
+		auth_header << ALGORITHM << " Credential=" << access_key_ << "/" << date_stamp << "/" << region_ << "/"
+			    << SERVICE_NAME << "/aws4_request,"
 			    << "SignedHeaders=" << getSignedHeaders(headers) << ","
 			    << "Signature=" << signature;
 
@@ -157,15 +150,11 @@ std::string AWSTranslator::translate(const std::string &text, const std::string 
 
 		// Set headers
 		struct curl_slist *header_list = nullptr;
-		header_list = curl_slist_append(
-			header_list, ("Content-Type: " + headers["content-type"]).c_str());
+		header_list = curl_slist_append(header_list, ("Content-Type: " + headers["content-type"]).c_str());
+		header_list = curl_slist_append(header_list, ("X-Amz-Date: " + headers["x-amz-date"]).c_str());
 		header_list = curl_slist_append(header_list,
-						("X-Amz-Date: " + headers["x-amz-date"]).c_str());
-		header_list = curl_slist_append(
-			header_list,
-			("X-Amz-Content-Sha256: " + headers["x-amz-content-sha256"]).c_str());
-		header_list = curl_slist_append(header_list,
-						("Authorization: " + auth_header.str()).c_str());
+						("X-Amz-Content-Sha256: " + headers["x-amz-content-sha256"]).c_str());
+		header_list = curl_slist_append(header_list, ("Authorization: " + auth_header.str()).c_str());
 
 		curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, header_list);
 
@@ -176,8 +165,7 @@ std::string AWSTranslator::translate(const std::string &text, const std::string 
 		curl_slist_free_all(header_list);
 
 		if (res != CURLE_OK) {
-			throw TranslationError(std::string("CURL request failed: ") +
-					       curl_easy_strerror(res));
+			throw TranslationError(std::string("CURL request failed: ") + curl_easy_strerror(res));
 		}
 
 		return parseResponse(response);
@@ -194,8 +182,7 @@ std::string AWSTranslator::parseResponse(const std::string &response_str)
 
 		// Check for error response
 		if (response.contains("__type")) {
-			throw TranslationError("AWS API Error: " +
-					       response.value("message", "Unknown error"));
+			throw TranslationError("AWS API Error: " + response.value("message", "Unknown error"));
 		}
 
 		return response["TranslatedText"].get<std::string>();

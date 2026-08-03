@@ -40,8 +40,7 @@ size_t CurlHelper::WriteCallback(void *contents, size_t size, size_t nmemb, void
 
 std::string CurlHelper::urlEncode(const std::string &value)
 {
-	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(),
-								 curl_easy_cleanup);
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), curl_easy_cleanup);
 
 	std::unique_ptr<char, decltype(&curl_free)> escaped(
 		curl_easy_escape(curl.get(), value.c_str(), (int)value.length()), curl_free);

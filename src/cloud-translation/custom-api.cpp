@@ -7,8 +7,7 @@
 
 using json = nlohmann::json;
 
-CustomApiTranslator::CustomApiTranslator(const std::string &endpoint,
-					 const std::string &body_template,
+CustomApiTranslator::CustomApiTranslator(const std::string &endpoint, const std::string &body_template,
 					 const std::string &response_json_path)
 	: endpoint_(endpoint),
 	  body_template_(body_template),
@@ -28,16 +27,14 @@ std::string CustomApiTranslator::translate(const std::string &text, const std::s
 	// remove '"' from the beginning and end of the string
 	textStr = textStr.substr(1, textStr.size() - 2);
 	// then replace the placeholders in the body template
-	std::unordered_map<std::string, std::string> values = {
-		{"\\{\\{sentence\\}\\}", textStr},
-		{"\\{\\{target_lang\\}\\}", target_lang},
-		{"\\{\\{source_lang\\}\\}", source_lang}};
+	std::unordered_map<std::string, std::string> values = {{"\\{\\{sentence\\}\\}", textStr},
+							       {"\\{\\{target_lang\\}\\}", target_lang},
+							       {"\\{\\{source_lang\\}\\}", source_lang}};
 
 	std::string body = replacePlaceholders(body_template_, values);
 	std::string response;
 
-	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(),
-								 curl_easy_cleanup);
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), curl_easy_cleanup);
 
 	if (!curl) {
 		throw std::runtime_error("Failed to initialize CURL session");
@@ -68,8 +65,7 @@ std::string CustomApiTranslator::translate(const std::string &text, const std::s
 		curl_slist_free_all(headers);
 
 		if (res != CURLE_OK) {
-			throw TranslationError(std::string("CURL request failed: ") +
-					       curl_easy_strerror(res));
+			throw TranslationError(std::string("CURL request failed: ") + curl_easy_strerror(res));
 		}
 
 		return parseResponse(response);
@@ -79,9 +75,8 @@ std::string CustomApiTranslator::translate(const std::string &text, const std::s
 	}
 }
 
-std::string CustomApiTranslator::replacePlaceholders(
-	const std::string &template_str,
-	const std::unordered_map<std::string, std::string> &values) const
+std::string CustomApiTranslator::replacePlaceholders(const std::string &template_str,
+						     const std::unordered_map<std::string, std::string> &values) const
 {
 	std::string result = template_str;
 	for (const auto &pair : values) {

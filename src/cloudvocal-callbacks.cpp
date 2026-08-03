@@ -37,8 +37,8 @@ void send_caption_to_source(const std::string &target_source_name, const std::st
 	obs_source_release(target);
 }
 
-void audio_chunk_callback(struct cloudvocal_data *gf, const float *pcm32f_data, size_t frames,
-			  int vad_state, const DetectionResultWithText &result)
+void audio_chunk_callback(struct cloudvocal_data *gf, const float *pcm32f_data, size_t frames, int vad_state,
+			  const DetectionResultWithText &result)
 {
 	UNUSED_PARAMETER(gf);
 	UNUSED_PARAMETER(pcm32f_data);
@@ -48,8 +48,7 @@ void audio_chunk_callback(struct cloudvocal_data *gf, const float *pcm32f_data, 
 	// stub
 }
 
-void send_sentence_to_cloud_translation_async(const std::string &sentence,
-					      struct cloudvocal_data *gf,
+void send_sentence_to_cloud_translation_async(const std::string &sentence, struct cloudvocal_data *gf,
 					      const std::string &source_language,
 					      std::function<void(const std::string &)> callback)
 {
@@ -57,8 +56,7 @@ void send_sentence_to_cloud_translation_async(const std::string &sentence,
 	gf->last_text_for_translation = sentence;
 	if (gf->translate && !sentence.empty() && gf->active) {
 		obs_log(gf->log_level, "Translating text with cloud provider %s. %s -> %s",
-			gf->translate_cloud_config.provider.c_str(), source_language.c_str(),
-			gf->target_lang.c_str());
+			gf->translate_cloud_config.provider.c_str(), source_language.c_str(), gf->target_lang.c_str());
 		if (sentence == last_text) {
 			// do not translate the same sentence twice
 			callback(gf->last_text_translation);
@@ -67,12 +65,12 @@ void send_sentence_to_cloud_translation_async(const std::string &sentence,
 
 		std::thread([sentence, gf, source_language, callback]() {
 			std::string translated_text;
-			translated_text = translate_cloud(gf->translate_cloud_config, sentence,
-							  gf->target_lang, source_language);
+			translated_text =
+				translate_cloud(gf->translate_cloud_config, sentence, gf->target_lang, source_language);
 			if (!translated_text.empty()) {
 				if (gf->log_words) {
-					obs_log(LOG_INFO, "Cloud Translation: '%s' -> '%s'",
-						sentence.c_str(), translated_text.c_str());
+					obs_log(LOG_INFO, "Cloud Translation: '%s' -> '%s'", sentence.c_str(),
+						translated_text.c_str());
 				}
 				gf->last_text_translation = translated_text;
 				callback(translated_text);
@@ -86,8 +84,7 @@ void send_sentence_to_cloud_translation_async(const std::string &sentence,
 }
 
 void send_sentence_to_file(struct cloudvocal_data *gf, const DetectionResultWithText &result,
-			   const std::string &sentence, const std::string &file_path,
-			   bool bump_sentence_number)
+			   const std::string &sentence, const std::string &file_path, bool bump_sentence_number)
 {
 	// Check if we should save the sentence
 	if (gf->save_only_while_recording && !obs_frontend_recording_active()) {
@@ -119,8 +116,8 @@ void send_sentence_to_file(struct cloudvocal_data *gf, const DetectionResultWith
 			return;
 		}
 
-		obs_log(gf->log_level, "Saving sentence to file %s, sentence #%d",
-			file_path.c_str(), gf->sentence_number);
+		obs_log(gf->log_level, "Saving sentence to file %s, sentence #%d", file_path.c_str(),
+			gf->sentence_number);
 		// Append sentence to file in .srt format
 		std::ofstream output_file(file_path, openmode);
 		output_file << gf->sentence_number << std::endl;
@@ -133,10 +130,9 @@ void send_sentence_to_file(struct cloudvocal_data *gf, const DetectionResultWith
 			uint64_t time_s_rem = time_s % 60;
 			uint64_t time_m_rem = time_m % 60;
 			uint64_t time_h_rem = time_h % 60;
-			output_stream << std::setfill('0') << std::setw(2) << time_h_rem << ":"
-				      << std::setfill('0') << std::setw(2) << time_m_rem << ":"
-				      << std::setfill('0') << std::setw(2) << time_s_rem << ","
-				      << std::setfill('0') << std::setw(3) << time_ms_rem;
+			output_stream << std::setfill('0') << std::setw(2) << time_h_rem << ":" << std::setfill('0')
+				      << std::setw(2) << time_m_rem << ":" << std::setfill('0') << std::setw(2)
+				      << time_s_rem << "," << std::setfill('0') << std::setw(3) << time_ms_rem;
 		};
 		format_ts_for_srt(output_file, result.start_timestamp_ms);
 		output_file << " --> ";
@@ -153,10 +149,8 @@ void send_sentence_to_file(struct cloudvocal_data *gf, const DetectionResultWith
 	}
 }
 
-void send_translated_sentence_to_file(struct cloudvocal_data *gf,
-				      const DetectionResultWithText &result,
-				      const std::string &translated_sentence,
-				      const std::string &target_lang)
+void send_translated_sentence_to_file(struct cloudvocal_data *gf, const DetectionResultWithText &result,
+				      const std::string &translated_sentence, const std::string &target_lang)
 {
 	// if translation is enabled, save the translated sentence to another file
 	if (translated_sentence.empty()) {
@@ -165,31 +159,26 @@ void send_translated_sentence_to_file(struct cloudvocal_data *gf,
 		// add a postfix to the file name (without extension) with the translation target language
 		std::string translated_file_path = "";
 		std::string output_file_path = gf->output_file_path;
-		std::string file_extension =
-			output_file_path.substr(output_file_path.find_last_of(".") + 1);
-		std::string file_name =
-			output_file_path.substr(0, output_file_path.find_last_of("."));
+		std::string file_extension = output_file_path.substr(output_file_path.find_last_of(".") + 1);
+		std::string file_name = output_file_path.substr(0, output_file_path.find_last_of("."));
 		translated_file_path = file_name + "_" + target_lang + "." + file_extension;
 		send_sentence_to_file(gf, result, translated_sentence, translated_file_path, false);
 	}
 }
 
-void send_caption_to_stream(DetectionResultWithText result, const std::string &str_copy,
-			    struct cloudvocal_data *gf)
+void send_caption_to_stream(DetectionResultWithText result, const std::string &str_copy, struct cloudvocal_data *gf)
 {
 	obs_output_t *streaming_output = obs_frontend_get_streaming_output();
 	if (streaming_output) {
 		// calculate the duration in seconds
-		const double duration =
-			(double)(result.end_timestamp_ms - result.start_timestamp_ms) / 1000.0;
+		const double duration = (double)(result.end_timestamp_ms - result.start_timestamp_ms) / 1000.0;
 		// prevent the duration from being too short or too long
 		const double effective_duration = std::min(std::max(2.0, duration), 7.0);
 		obs_log(gf->log_level,
 			"Sending caption to streaming output: %s (raw duration %.3f, effective duration %.3f)",
 			str_copy.c_str(), duration, effective_duration);
 		// TODO: find out why setting short duration does not work
-		obs_output_output_caption_text2(streaming_output, str_copy.c_str(),
-						effective_duration);
+		obs_output_output_caption_text2(streaming_output, str_copy.c_str(), effective_duration);
 		obs_output_release(streaming_output);
 	}
 }
@@ -206,53 +195,44 @@ void set_text_callback(struct cloudvocal_data *gf, const DetectionResultWithText
 		// check if the text is in the suppression list
 		for (const auto &filter_words : gf->filter_words_replace) {
 			// if filter exists within str_copy, replace it with the replacement
-			str_copy = std::regex_replace(str_copy,
-						      std::regex(std::get<0>(filter_words),
-								 std::regex_constants::icase),
-						      std::get<1>(filter_words));
+			str_copy = std::regex_replace(
+				str_copy, std::regex(std::get<0>(filter_words), std::regex_constants::icase),
+				std::get<1>(filter_words));
 		}
 		// if the text was modified, log the original and modified text
 		if (original_str_copy != str_copy) {
-			obs_log(gf->log_level, "------ Suppressed text: '%s' -> '%s'",
-				original_str_copy.c_str(), str_copy.c_str());
+			obs_log(gf->log_level, "------ Suppressed text: '%s' -> '%s'", original_str_copy.c_str(),
+				str_copy.c_str());
 		}
 	}
 
 	// should translate if translation is enabled and the result is full
 	// or if partial translations are enabled
-	bool should_translate = (gf->translate_only_full_sentences
-					 ? result.result == DETECTION_RESULT_SPEECH
-					 : true) &&
+	bool should_translate = (gf->translate_only_full_sentences ? result.result == DETECTION_RESULT_SPEECH : true) &&
 				gf->translate;
 
 	if (should_translate) {
 		send_sentence_to_cloud_translation_async(
-			str_copy, gf, result.language,
-			[gf, result](const std::string &translated_sentence_cloud) {
+			str_copy, gf, result.language, [gf, result](const std::string &translated_sentence_cloud) {
 				if (gf->translation_output != "none") {
-					send_caption_to_source(gf->translation_output,
-							       translated_sentence_cloud, gf);
+					send_caption_to_source(gf->translation_output, translated_sentence_cloud, gf);
 				} else {
 					// overwrite the original text with the translated text
-					send_caption_to_source(gf->text_source_name,
-							       translated_sentence_cloud, gf);
+					send_caption_to_source(gf->text_source_name, translated_sentence_cloud, gf);
 				}
 				if (gf->save_to_file && gf->output_file_path != "") {
-					send_translated_sentence_to_file(gf, result,
-									 translated_sentence_cloud,
+					send_translated_sentence_to_file(gf, result, translated_sentence_cloud,
 									 gf->target_lang);
 				}
 				if (gf->send_timed_metadata) {
-					send_timed_metadata_to_server(gf, SOURCE_AND_TARGET,
-								      result.text, result.language,
-								      translated_sentence_cloud,
+					send_timed_metadata_to_server(gf, SOURCE_AND_TARGET, result.text,
+								      result.language, translated_sentence_cloud,
 								      gf->target_lang);
 				}
 			});
 	} else {
 		if (gf->send_timed_metadata) {
-			send_timed_metadata_to_server(gf, ONLY_SOURCE, result.text, result.language,
-						      "", "");
+			send_timed_metadata_to_server(gf, ONLY_SOURCE, result.text, result.language, "", "");
 		}
 	}
 
@@ -268,13 +248,12 @@ void set_text_callback(struct cloudvocal_data *gf, const DetectionResultWithText
 		send_caption_to_stream(result, str_copy, gf);
 	}
 
-	if (gf->save_to_file && gf->output_file_path != "" &&
-	    result.result == DETECTION_RESULT_SPEECH) {
+	if (gf->save_to_file && gf->output_file_path != "" && result.result == DETECTION_RESULT_SPEECH) {
 		send_sentence_to_file(gf, result, str_copy, gf->output_file_path, true);
 	}
 
-	if (!result.text.empty() && (result.result == DETECTION_RESULT_SPEECH ||
-				     result.result == DETECTION_RESULT_PARTIAL)) {
+	if (!result.text.empty() &&
+	    (result.result == DETECTION_RESULT_SPEECH || result.result == DETECTION_RESULT_PARTIAL)) {
 		gf->last_sub_render_time = now_ms();
 		gf->cleared_last_sub = false;
 		if (result.result == DETECTION_RESULT_SPEECH) {
@@ -305,13 +284,11 @@ void recording_state_callback(enum obs_frontend_event event, void *data)
 {
 	struct cloudvocal_data *gf_ = static_cast<struct cloudvocal_data *>(data);
 	if (event == OBS_FRONTEND_EVENT_RECORDING_STARTING) {
-		if (gf_->save_srt && gf_->save_only_while_recording &&
-		    gf_->output_file_path != "") {
+		if (gf_->save_srt && gf_->save_only_while_recording && gf_->output_file_path != "") {
 			obs_log(gf_->log_level, "Recording started. Resetting srt file.");
 			// truncate file if it exists
 			if (std::ifstream(gf_->output_file_path)) {
-				std::ofstream output_file(gf_->output_file_path,
-							  std::ios::out | std::ios::trunc);
+				std::ofstream output_file(gf_->output_file_path, std::ios::out | std::ios::trunc);
 				output_file.close();
 			}
 			gf_->sentence_number = 1;

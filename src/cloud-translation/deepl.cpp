@@ -17,8 +17,7 @@ DeepLTranslator::~DeepLTranslator() = default;
 std::string DeepLTranslator::translate(const std::string &text, const std::string &target_lang,
 				       const std::string &source_lang)
 {
-	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(),
-								 curl_easy_cleanup);
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), curl_easy_cleanup);
 
 	if (!curl) {
 		throw TranslationError("DeepL Failed to initialize CURL session");
@@ -36,9 +35,7 @@ std::string DeepLTranslator::translate(const std::string &text, const std::strin
 		for (char &c : upperSource)
 			c = (char)std::toupper((int)c);
 
-		json body = {{"text", {text}},
-			     {"target_lang", upperTarget},
-			     {"source_lang", upperSource}};
+		json body = {{"text", {text}}, {"target_lang", upperTarget}, {"source_lang", upperSource}};
 		const std::string body_str = body.dump();
 
 		std::string url = "https://api.deepl.com/v2/translate";
@@ -60,8 +57,7 @@ std::string DeepLTranslator::translate(const std::string &text, const std::strin
 		// DeepL requires specific headers
 		struct curl_slist *headers = nullptr;
 		headers = curl_slist_append(headers, "Content-Type: application/json");
-		headers = curl_slist_append(headers,
-					    ("Authorization: DeepL-Auth-Key " + api_key_).c_str());
+		headers = curl_slist_append(headers, ("Authorization: DeepL-Auth-Key " + api_key_).c_str());
 		curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, headers);
 
 		CURLcode res = curl_easy_perform(curl.get());
@@ -70,8 +66,7 @@ std::string DeepLTranslator::translate(const std::string &text, const std::strin
 		curl_slist_free_all(headers);
 
 		if (res != CURLE_OK) {
-			throw TranslationError(std::string("DeepL: CURL request failed: ") +
-					       curl_easy_strerror(res));
+			throw TranslationError(std::string("DeepL: CURL request failed: ") + curl_easy_strerror(res));
 		}
 
 		return parseResponse(response);
@@ -108,8 +103,7 @@ std::string DeepLTranslator::parseResponse(const std::string &response_str)
 
 	// Check for API errors
 	if (response.contains("message")) {
-		throw TranslationError("DeepL API Error: " +
-				       response["message"].get<std::string>());
+		throw TranslationError("DeepL API Error: " + response["message"].get<std::string>());
 	}
 
 	try {

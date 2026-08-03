@@ -3,8 +3,7 @@
 #include "openai/openai-provider.h"
 
 std::shared_ptr<CloudProvider> createCloudProvider(const std::string &providerType,
-						   CloudProvider::TranscriptionCallback callback,
-						   cloudvocal_data *gf)
+						   CloudProvider::TranscriptionCallback callback, cloudvocal_data *gf)
 {
 	if (providerType == "openai") {
 		return std::make_shared<OpenAIProvider>(callback, gf);
@@ -28,8 +27,7 @@ void restart_cloud_provider(cloudvocal_data *gf)
 		},
 		gf);
 	if (gf->cloud_provider == nullptr) {
-		obs_log(LOG_ERROR, "Failed to create cloud provider '%s'",
-			gf->cloud_provider_selection.c_str());
+		obs_log(LOG_ERROR, "Failed to create cloud provider '%s'", gf->cloud_provider_selection.c_str());
 		gf->active = false;
 		return;
 	}

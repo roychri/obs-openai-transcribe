@@ -16,8 +16,7 @@ public:
 	static std::string urlEncode(const std::string &value);
 
 	// Common request builders
-	static struct curl_slist *
-	createBasicHeaders(const std::string &content_type = "application/json");
+	static struct curl_slist *createBasicHeaders(const std::string &content_type = "application/json");
 
 	// Verify HTTPS certificate
 	static void setSSLVerification(CURL *curl, bool verify = true);

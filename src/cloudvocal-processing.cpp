@@ -17,8 +17,8 @@ bool ensure_resampler(cloudvocal_data *gf, int target_sample_rate)
 	}
 
 	if (gf->resampler != nullptr) {
-		obs_log(gf->log_level, "rebuilding resampler for %d Hz (was %d Hz)",
-			target_sample_rate, gf->transcription_sample_rate);
+		obs_log(gf->log_level, "rebuilding resampler for %d Hz (was %d Hz)", target_sample_rate,
+			gf->transcription_sample_rate);
 		audio_resampler_destroy(gf->resampler);
 		gf->resampler = nullptr;
 	}
@@ -59,8 +59,7 @@ int get_data_from_buf_and_resample(cloudvocal_data *gf, uint64_t &start_timestam
 		}
 
 #ifdef CLOUDVOCAL_EXTRA_VERBOSE
-		obs_log(gf->log_level,
-			"segmentation: currently %lu bytes in the audio input buffer",
+		obs_log(gf->log_level, "segmentation: currently %lu bytes in the audio input buffer",
 			gf->input_buffers[0].size);
 #endif
 
@@ -87,29 +86,26 @@ int get_data_from_buf_and_resample(cloudvocal_data *gf, uint64_t &start_timestam
 			}
 		}
 		// calculate the end timestamp from the last info plus the number of frames in the packet
-		end_timestamp_offset_ns = info_from_buf.timestamp_offset_ns +
-					  info_from_buf.frames * 1000000000 / gf->sample_rate;
+		end_timestamp_offset_ns =
+			info_from_buf.timestamp_offset_ns + info_from_buf.frames * 1000000000 / gf->sample_rate;
 
 		if (start_timestamp_offset_ns > end_timestamp_offset_ns) {
 			// this may happen when the incoming media has a timestamp reset
 			// in this case, we should figure out the start timestamp from the end timestamp
 			// and the number of frames
 			start_timestamp_offset_ns =
-				end_timestamp_offset_ns -
-				num_frames_from_infos * 1000000000 / gf->sample_rate;
+				end_timestamp_offset_ns - num_frames_from_infos * 1000000000 / gf->sample_rate;
 		}
 
 		/* Pop from input circlebuf */
 		for (size_t c = 0; c < gf->channels; c++) {
 			// Push the new data to copy_buffers[c]
 			copy_buffers[c].resize(num_frames_from_infos);
-			std::copy(gf->input_buffers[c].begin(),
-				  gf->input_buffers[c].begin() + num_frames_from_infos,
+			std::copy(gf->input_buffers[c].begin(), gf->input_buffers[c].begin() + num_frames_from_infos,
 				  copy_buffers[c].begin());
 			// Pop the data from the input buffer
 			gf->input_buffers[c].erase(gf->input_buffers[c].begin(),
-						   gf->input_buffers[c].begin() +
-							   num_frames_from_infos);
+						   gf->input_buffers[c].begin() + num_frames_from_infos);
 		}
 	}
 
@@ -151,8 +147,7 @@ int get_data_from_buf_and_resample(cloudvocal_data *gf, uint64_t &start_timestam
 		gf->resampled_buffer.insert(gf->resampled_buffer.end(), resampled_16khz[0],
 					    resampled_16khz[0] + resampled_16khz_frames);
 #ifdef CLOUDVOCAL_EXTRA_VERBOSE
-		obs_log(gf->log_level,
-			"resampled: %d channels, %d frames, %f ms, current size: %lu bytes",
+		obs_log(gf->log_level, "resampled: %d channels, %d frames, %f ms, current size: %lu bytes",
 			(int)gf->channels, (int)resampled_16khz_frames,
 			(float)resampled_16khz_frames / gf->transcription_sample_rate * 1000.0f,
 			gf->resampled_buffer.size);

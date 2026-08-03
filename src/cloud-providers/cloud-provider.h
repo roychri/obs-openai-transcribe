@@ -82,8 +82,7 @@ protected:
 		uint64_t end_timestamp_offset_ns = 0;
 
 		while (running && !stop_requested) {
-			get_data_from_buf_and_resample(gf, start_timestamp_offset_ns,
-						       end_timestamp_offset_ns);
+			get_data_from_buf_and_resample(gf, start_timestamp_offset_ns, end_timestamp_offset_ns);
 
 			if (gf->resampled_buffer.empty()) {
 				std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -100,11 +99,9 @@ protected:
 				std::unique_lock<std::mutex> lock(gf->input_buffers_mutex);
 				// Bounded wait so idle providers still get a periodic tick even
 				// when no audio ever arrives (muted source, inactive scene).
-				gf->input_buffers_cv.wait_for(
-					lock, std::chrono::milliseconds(250), [this] {
-						return !(gf->input_buffers[0]).empty() || !running ||
-						       stop_requested;
-					});
+				gf->input_buffers_cv.wait_for(lock, std::chrono::milliseconds(250), [this] {
+					return !(gf->input_buffers[0]).empty() || !running || stop_requested;
+				});
 			}
 
 			if (running && !stop_requested) {
@@ -140,7 +137,6 @@ private:
 };
 
 std::shared_ptr<CloudProvider> createCloudProvider(const std::string &providerType,
-						   CloudProvider::TranscriptionCallback callback,
-						   cloudvocal_data *gf);
+						   CloudProvider::TranscriptionCallback callback, cloudvocal_data *gf);
 
 void restart_cloud_provider(cloudvocal_data *gf);

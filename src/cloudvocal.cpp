@@ -195,17 +195,14 @@ void cloudvocal_update(void *data, obs_data_t *s)
 	gf->translate_cloud_config.provider = obs_data_get_string(s, "translate_cloud_provider");
 	gf->target_lang = obs_data_get_string(s, "translate_cloud_target_language");
 	gf->translation_output = obs_data_get_string(s, "translate_cloud_output");
-	gf->translate_only_full_sentences =
-		obs_data_get_bool(s, "translate_cloud_only_full_sentences");
+	gf->translate_only_full_sentences = obs_data_get_bool(s, "translate_cloud_only_full_sentences");
 	gf->translate_cloud_config.access_key = obs_data_get_string(s, "translate_cloud_api_key");
-	gf->translate_cloud_config.secret_key =
-		obs_data_get_string(s, "translate_cloud_secret_key");
+	gf->translate_cloud_config.secret_key = obs_data_get_string(s, "translate_cloud_secret_key");
 	gf->translate_cloud_config.free = obs_data_get_bool(s, "translate_cloud_deepl_free");
 	gf->translate_cloud_config.region = obs_data_get_string(s, "translate_cloud_region");
 	gf->translate_cloud_config.endpoint = obs_data_get_string(s, "translate_cloud_endpoint");
 	gf->translate_cloud_config.body = obs_data_get_string(s, "translate_cloud_body");
-	gf->translate_cloud_config.response_json_path =
-		obs_data_get_string(s, "translate_cloud_response_json_path");
+	gf->translate_cloud_config.response_json_path = obs_data_get_string(s, "translate_cloud_response_json_path");
 
 	obs_log(gf->log_level, "update text source");
 	// update the text source
@@ -219,15 +216,11 @@ void cloudvocal_update(void *data, obs_data_t *s)
 		gf->text_source_name = new_text_source_name;
 	}
 
-	const char *transcription_language_select =
-		obs_data_get_string(s, "transcription_language_select");
+	const char *transcription_language_select = obs_data_get_string(s, "transcription_language_select");
 	std::string new_language = transcription_language_select;
-	std::string new_cloud_provider_api_key =
-		obs_data_get_string(s, "transcription_cloud_provider_api_key");
-	std::string new_cloud_provider_selection =
-		obs_data_get_string(s, "transcription_cloud_provider");
-	std::string new_cloud_provider_secret_key =
-		obs_data_get_string(s, "transcription_cloud_provider_secret_key");
+	std::string new_cloud_provider_api_key = obs_data_get_string(s, "transcription_cloud_provider_api_key");
+	std::string new_cloud_provider_selection = obs_data_get_string(s, "transcription_cloud_provider");
+	std::string new_cloud_provider_secret_key = obs_data_get_string(s, "transcription_cloud_provider_secret_key");
 
 	// OpenAI context options. These are baked into the session at connect time, so a
 	// change to any of them has to restart the provider to take effect.
@@ -238,12 +231,10 @@ void cloudvocal_update(void *data, obs_data_t *s)
 	// Idle timeout is read live - it does not need a reconnect.
 	gf->openai_idle_timeout_sec = (int)obs_data_get_int(s, "openai_idle_timeout");
 
-	if (gf->cloud_provider_selection != new_cloud_provider_selection ||
-	    gf->language != new_language ||
+	if (gf->cloud_provider_selection != new_cloud_provider_selection || gf->language != new_language ||
 	    gf->cloud_provider_api_key != new_cloud_provider_api_key ||
-	    gf->cloud_provider_secret_key != new_cloud_provider_secret_key ||
-	    gf->openai_delay != new_openai_delay || gf->openai_prompt != new_openai_prompt ||
-	    gf->openai_keywords != new_openai_keywords) {
+	    gf->cloud_provider_secret_key != new_cloud_provider_secret_key || gf->openai_delay != new_openai_delay ||
+	    gf->openai_prompt != new_openai_prompt || gf->openai_keywords != new_openai_keywords) {
 		// cloud provider selection, api key or session options changed
 		obs_log(gf->log_level, "cloud provider selection, language, keys or options changed");
 		gf->cloud_provider_selection = new_cloud_provider_selection;
@@ -260,12 +251,9 @@ void cloudvocal_update(void *data, obs_data_t *s)
 
 	// Update timed metadata options
 	gf->send_timed_metadata = obs_data_get_bool(s, "timed_metadata_group");
-	gf->timed_metadata_config.aws_access_key =
-		obs_data_get_string(s, "timed_metadata_aws_access_key");
-	gf->timed_metadata_config.aws_secret_key =
-		obs_data_get_string(s, "timed_metadata_aws_secret_key");
-	gf->timed_metadata_config.ivs_channel_arn =
-		obs_data_get_string(s, "timed_metadata_channel_arn");
+	gf->timed_metadata_config.aws_access_key = obs_data_get_string(s, "timed_metadata_aws_access_key");
+	gf->timed_metadata_config.aws_secret_key = obs_data_get_string(s, "timed_metadata_aws_secret_key");
+	gf->timed_metadata_config.ivs_channel_arn = obs_data_get_string(s, "timed_metadata_channel_arn");
 	gf->timed_metadata_config.aws_region = obs_data_get_string(s, "timed_metadata_aws_region");
 
 	if (gf->context != nullptr && (obs_source_enabled(gf->context) || gf->initial_creation)) {
@@ -300,8 +288,7 @@ void *cloudvocal_create(obs_data_t *settings, obs_source_t *filter)
 	gf->save_srt = obs_data_get_bool(settings, "subtitle_save_srt");
 	gf->truncate_output_file = obs_data_get_bool(settings, "truncate_output_file");
 	gf->save_only_while_recording = obs_data_get_bool(settings, "only_while_recording");
-	gf->rename_file_to_match_recording =
-		obs_data_get_bool(settings, "rename_file_to_match_recording");
+	gf->rename_file_to_match_recording = obs_data_get_bool(settings, "rename_file_to_match_recording");
 	gf->process_while_muted = obs_data_get_bool(settings, "process_while_muted");
 	gf->initial_creation = true;
 
@@ -324,8 +311,8 @@ void *cloudvocal_create(obs_data_t *settings, obs_source_t *filter)
 
 	obs_log(gf->log_level, "clear text source data");
 	const char *subtitle_sources = obs_data_get_string(settings, "subtitle_sources");
-	if (subtitle_sources == nullptr || strlen(subtitle_sources) == 0 ||
-	    strcmp(subtitle_sources, "none") == 0 || strcmp(subtitle_sources, "(null)") == 0) {
+	if (subtitle_sources == nullptr || strlen(subtitle_sources) == 0 || strcmp(subtitle_sources, "none") == 0 ||
+	    strcmp(subtitle_sources, "(null)") == 0) {
 		obs_log(gf->log_level, "Create text source");
 		create_obs_text_source_if_needed();
 		gf->text_source_name = CAPTIONS_TEXT_SOURCE_NAME;

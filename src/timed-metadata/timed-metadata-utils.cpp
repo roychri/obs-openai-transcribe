@@ -29,10 +29,8 @@ size_t WriteCallback(void *ptr, size_t size, size_t nmemb, std::string *data)
 }
 
 void send_timed_metadata_to_ivs_endpoint(struct cloudvocal_data *gf, Translation_Mode mode,
-					 const std::string &source_text,
-					 const std::string &source_lang,
-					 const std::string &target_text,
-					 const std::string &target_lang)
+					 const std::string &source_text, const std::string &source_lang,
+					 const std::string &target_text, const std::string &target_lang)
 {
 	if (!gf->active || !gf->send_timed_metadata) {
 		return;
@@ -58,29 +56,24 @@ void send_timed_metadata_to_ivs_endpoint(struct cloudvocal_data *gf, Translation
 			array.push_back({{"language", target_lang}, {"text", target_text}});
 		}
 		if (array.empty()) {
-			obs_log(gf->log_level,
-				"send_timed_metadata_to_ivs_endpoint - source and target text empty");
+			obs_log(gf->log_level, "send_timed_metadata_to_ivs_endpoint - source and target text empty");
 			return;
 		}
 		inner_meta_data = {{"captions", array}};
 	} else if (mode == ONLY_TARGET) {
 		if (target_text.empty()) {
-			obs_log(gf->log_level,
-				"send_timed_metadata_to_ivs_endpoint - target text empty");
+			obs_log(gf->log_level, "send_timed_metadata_to_ivs_endpoint - target text empty");
 			return;
 		}
 		obs_log(gf->log_level, "send_timed_metadata_to_ivs_endpoint - ONLY_TARGET");
-		inner_meta_data = {
-			{"captions", {{{"language", target_lang}, {"text", target_text}}}}};
+		inner_meta_data = {{"captions", {{{"language", target_lang}, {"text", target_text}}}}};
 	} else {
 		if (source_text.empty()) {
-			obs_log(gf->log_level,
-				"send_timed_metadata_to_ivs_endpoint - source text empty");
+			obs_log(gf->log_level, "send_timed_metadata_to_ivs_endpoint - source text empty");
 			return;
 		}
 		obs_log(gf->log_level, "send_timed_metadata_to_ivs_endpoint - ONLY_SOURCE");
-		inner_meta_data = {
-			{"captions", {{{"language", source_lang}, {"text", source_text}}}}};
+		inner_meta_data = {{"captions", {{{"language", source_lang}, {"text", source_text}}}}};
 	}
 
 	// Construct the outer JSON string
@@ -112,10 +105,7 @@ void send_timed_metadata_to_ivs_endpoint(struct cloudvocal_data *gf, Translation
 	std::string ALGORITHM = "AWS4-HMAC-SHA256";
 	std::string CREDENTIAL_SCOPE = DATE + "/" + REGION + "/" + SERVICE + "/aws4_request";
 	std::ostringstream stringToSign;
-	stringToSign << ALGORITHM << "\n"
-		     << TIMESTAMP << "\n"
-		     << CREDENTIAL_SCOPE << "\n"
-		     << HASHED_CANONICAL_REQUEST;
+	stringToSign << ALGORITHM << "\n" << TIMESTAMP << "\n" << CREDENTIAL_SCOPE << "\n" << HASHED_CANONICAL_REQUEST;
 	std::string STRING_TO_SIGN = stringToSign.str();
 
 	std::string KEY = "AWS4" + AWS_SECRET_KEY;
@@ -136,8 +126,7 @@ void send_timed_metadata_to_ivs_endpoint(struct cloudvocal_data *gf, Translation
 	CURLcode res;
 	curl = curl_easy_init();
 	if (!curl) {
-		obs_log(LOG_ERROR,
-			"send_timed_metadata_to_ivs_endpoint failed: curl_easy_init failed");
+		obs_log(LOG_ERROR, "send_timed_metadata_to_ivs_endpoint failed: curl_easy_init failed");
 		return;
 	}
 
@@ -158,8 +147,7 @@ void send_timed_metadata_to_ivs_endpoint(struct cloudvocal_data *gf, Translation
 
 	res = curl_easy_perform(curl);
 	if (res != CURLE_OK) {
-		obs_log(LOG_WARNING, "send_timed_metadata_to_ivs_endpoint failed:%s",
-			curl_easy_strerror(res));
+		obs_log(LOG_WARNING, "send_timed_metadata_to_ivs_endpoint failed:%s", curl_easy_strerror(res));
 	} else {
 		long response_code;
 		// Get the HTTP response code
@@ -174,27 +162,22 @@ void send_timed_metadata_to_ivs_endpoint(struct cloudvocal_data *gf, Translation
 }
 
 // source: transcription text, target: translation text
-void send_timed_metadata_to_server(struct cloudvocal_data *gf, Translation_Mode mode,
-				   const std::string &source_text, const std::string &source_lang,
-				   const std::string &target_text, const std::string &target_lang)
+void send_timed_metadata_to_server(struct cloudvocal_data *gf, Translation_Mode mode, const std::string &source_text,
+				   const std::string &source_lang, const std::string &target_text,
+				   const std::string &target_lang)
 {
 	if (!gf->send_timed_metadata) {
-		obs_log(gf->log_level,
-			"send_timed_metadata_to_server failed: timed metadata not enabled");
+		obs_log(gf->log_level, "send_timed_metadata_to_server failed: timed metadata not enabled");
 		return;
 	}
-	if (gf->timed_metadata_config.aws_access_key.empty() ||
-	    gf->timed_metadata_config.aws_secret_key.empty() ||
-	    gf->timed_metadata_config.ivs_channel_arn.empty() ||
-	    gf->timed_metadata_config.aws_region.empty()) {
-		obs_log(gf->log_level,
-			"send_timed_metadata_to_server failed: IVS settings not set");
+	if (gf->timed_metadata_config.aws_access_key.empty() || gf->timed_metadata_config.aws_secret_key.empty() ||
+	    gf->timed_metadata_config.ivs_channel_arn.empty() || gf->timed_metadata_config.aws_region.empty()) {
+		obs_log(gf->log_level, "send_timed_metadata_to_server failed: IVS settings not set");
 		return;
 	}
 
 	std::thread send_timed_metadata_thread([=]() {
-		send_timed_metadata_to_ivs_endpoint(gf, mode, source_text, source_lang, target_text,
-						    target_lang);
+		send_timed_metadata_to_ivs_endpoint(gf, mode, source_text, source_lang, target_text, target_lang);
 	});
 	send_timed_metadata_thread.detach();
 }

@@ -20,8 +20,7 @@ inline uint64_t now_ms()
 // Get the current timestamp in nano seconds since epoch
 inline uint64_t now_ns()
 {
-	return std::chrono::duration_cast<std::chrono::nanoseconds>(
-		       std::chrono::system_clock::now().time_since_epoch())
+	return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch())
 		.count();
 }
 

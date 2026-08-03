@@ -31,15 +31,12 @@ std::unique_ptr<ITranslator> createTranslator(const CloudTranslatorConfig &confi
 		return std::make_unique<PapagoTranslator>(config.access_key, config.secret_key);
 	} else if (config.provider == "claude") {
 		return std::make_unique<ClaudeTranslator>(
-			config.access_key,
-			config.model.empty() ? "claude-3-sonnet-20240229" : config.model);
+			config.access_key, config.model.empty() ? "claude-3-sonnet-20240229" : config.model);
 	} else if (config.provider == "openai") {
-		return std::make_unique<OpenAITranslator>(
-			config.access_key,
-			config.model.empty() ? "gpt-4-turbo-preview" : config.model);
+		return std::make_unique<OpenAITranslator>(config.access_key,
+							  config.model.empty() ? "gpt-4-turbo-preview" : config.model);
 	} else if (config.provider == "api") {
-		return std::make_unique<CustomApiTranslator>(config.endpoint, config.body,
-							     config.response_json_path);
+		return std::make_unique<CustomApiTranslator>(config.endpoint, config.body, config.response_json_path);
 	}
 	throw TranslationError("Unknown translation provider: " + config.provider);
 }
@@ -49,8 +46,8 @@ std::string translate_cloud(const CloudTranslatorConfig &config, const std::stri
 {
 	try {
 		auto translator = createTranslator(config);
-		obs_log(LOG_DEBUG, "translate with cloud provider %s. %s -> %s",
-			config.provider.c_str(), source_lang.c_str(), target_lang.c_str());
+		obs_log(LOG_DEBUG, "translate with cloud provider %s. %s -> %s", config.provider.c_str(),
+			source_lang.c_str(), target_lang.c_str());
 		std::string result = translator->translate(text, target_lang, source_lang);
 		return result;
 	} catch (const TranslationError &e) {

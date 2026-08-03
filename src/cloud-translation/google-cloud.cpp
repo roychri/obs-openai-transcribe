@@ -18,8 +18,7 @@ GoogleTranslator::~GoogleTranslator() = default;
 std::string GoogleTranslator::translate(const std::string &text, const std::string &target_lang,
 					const std::string &source_lang)
 {
-	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(),
-								 curl_easy_cleanup);
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), curl_easy_cleanup);
 
 	if (!curl) {
 		throw TranslationError("Failed to initialize CURL session");
@@ -53,8 +52,7 @@ std::string GoogleTranslator::translate(const std::string &text, const std::stri
 		CURLcode res = curl_easy_perform(curl.get());
 
 		if (res != CURLE_OK) {
-			throw TranslationError(std::string("CURL request failed: ") +
-					       curl_easy_strerror(res));
+			throw TranslationError(std::string("CURL request failed: ") + curl_easy_strerror(res));
 		}
 
 		return parseResponse(response);

@@ -22,8 +22,8 @@ std::string ClaudeTranslator::createSystemPrompt(const std::string &target_lang)
 {
 	std::string target_language = getLanguageName(target_lang);
 
-	return "You are a professional translator. Translate the user's text into " +
-	       target_language + " while preserving the meaning, tone, and style. " +
+	return "You are a professional translator. Translate the user's text into " + target_language +
+	       " while preserving the meaning, tone, and style. " +
 	       "Provide only the translated text without explanations, notes, or any other content. " +
 	       "Maintain any formatting, line breaks, or special characters from the original text.";
 }
@@ -39,8 +39,7 @@ std::string ClaudeTranslator::translate(const std::string &text, const std::stri
 		throw TranslationError("Unsupported source language: " + source_lang);
 	}
 
-	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(),
-								 curl_easy_cleanup);
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), curl_easy_cleanup);
 
 	if (!curl) {
 		throw TranslationError("Failed to initialize CURL session");
@@ -56,12 +55,10 @@ std::string ClaudeTranslator::translate(const std::string &text, const std::stri
 		json request_body = {{"model", model_},
 				     {"max_tokens", 4096},
 				     {"system", createSystemPrompt(target_lang)},
-				     {"messages",
-				      json::array({{{"role", "user"}, {"content", text}}})}};
+				     {"messages", json::array({{{"role", "user"}, {"content", text}}})}};
 
 		if (source_lang != "auto") {
-			request_body["system"] = createSystemPrompt(target_lang) +
-						 " The source text is in " +
+			request_body["system"] = createSystemPrompt(target_lang) + " The source text is in " +
 						 getLanguageName(source_lang) + ".";
 		}
 
@@ -91,8 +88,7 @@ std::string ClaudeTranslator::translate(const std::string &text, const std::stri
 		curl_slist_free_all(headers);
 
 		if (res != CURLE_OK) {
-			throw TranslationError(std::string("CURL request failed: ") +
-					       curl_easy_strerror(res));
+			throw TranslationError(std::string("CURL request failed: ") + curl_easy_strerror(res));
 		}
 
 		// Check HTTP response code
@@ -116,8 +112,8 @@ std::string ClaudeTranslator::parseResponse(const std::string &response_str)
 	try {
 		json response = json::parse(response_str);
 
-		if (!response.contains("content") || !response["content"].is_array() ||
-		    response["content"].empty() || !response["content"][0].contains("text")) {
+		if (!response.contains("content") || !response["content"].is_array() || response["content"].empty() ||
+		    !response["content"][0].contains("text")) {
 			throw TranslationError("Invalid response format from Claude API");
 		}
 

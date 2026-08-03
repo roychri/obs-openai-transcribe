@@ -10,8 +10,8 @@ void send_caption_to_source(const std::string &target_source_name, const std::st
 			    struct cloudvocal_data *gf);
 std::string send_sentence_to_translation(const std::string &sentence, struct cloudvocal_data *gf);
 
-void audio_chunk_callback(struct cloudvocal_data *gf, const float *pcm32f_data, size_t frames,
-			  int vad_state, const DetectionResultWithText &result);
+void audio_chunk_callback(struct cloudvocal_data *gf, const float *pcm32f_data, size_t frames, int vad_state,
+			  const DetectionResultWithText &result);
 
 void set_text_callback(struct cloudvocal_data *gf, const DetectionResultWithText &resultIn);
 

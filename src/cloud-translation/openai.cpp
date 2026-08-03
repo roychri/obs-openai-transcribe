@@ -22,8 +22,8 @@ std::string OpenAITranslator::createSystemPrompt(const std::string &target_lang)
 {
 	std::string target_language = getLanguageName(target_lang);
 
-	return "You are a professional translator. Translate the user's text into " +
-	       target_language + ". Maintain the exact meaning, tone, and style. " +
+	return "You are a professional translator. Translate the user's text into " + target_language +
+	       ". Maintain the exact meaning, tone, and style. " +
 	       "Respond with only the translated text, without any explanations or additional content. " +
 	       "Preserve all formatting, line breaks, and special characters from the original text.";
 }
@@ -39,8 +39,7 @@ std::string OpenAITranslator::translate(const std::string &text, const std::stri
 		throw TranslationError("Unsupported source language: " + source_lang);
 	}
 
-	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(),
-								 curl_easy_cleanup);
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), curl_easy_cleanup);
 
 	if (!curl) {
 		throw TranslationError("Failed to initialize CURL session");
@@ -56,14 +55,12 @@ std::string OpenAITranslator::translate(const std::string &text, const std::stri
 		json messages = json::array();
 
 		// Add system message
-		messages.push_back(
-			{{"role", "system"}, {"content", createSystemPrompt(target_lang)}});
+		messages.push_back({{"role", "system"}, {"content", createSystemPrompt(target_lang)}});
 
 		// Add user message with source language if specified
 		std::string user_prompt = text;
 		if (source_lang != "auto") {
-			user_prompt = "Translate the following " + getLanguageName(source_lang) +
-				      " text:\n\n" + text;
+			user_prompt = "Translate the following " + getLanguageName(source_lang) + " text:\n\n" + text;
 		}
 
 		messages.push_back({{"role", "user"}, {"content", user_prompt}});
@@ -71,8 +68,7 @@ std::string OpenAITranslator::translate(const std::string &text, const std::stri
 		// Create request body
 		json request_body = {{"model", model_},
 				     {"messages", messages},
-				     {"temperature",
-				      0.3}, // Lower temperature for more consistent translations
+				     {"temperature", 0.3}, // Lower temperature for more consistent translations
 				     {"max_tokens", 4000}};
 
 		std::string payload = request_body.dump();
@@ -100,8 +96,7 @@ std::string OpenAITranslator::translate(const std::string &text, const std::stri
 		curl_slist_free_all(headers);
 
 		if (res != CURLE_OK) {
-			throw TranslationError(std::string("CURL request failed: ") +
-					       curl_easy_strerror(res));
+			throw TranslationError(std::string("CURL request failed: ") + curl_easy_strerror(res));
 		}
 
 		// Check HTTP response code

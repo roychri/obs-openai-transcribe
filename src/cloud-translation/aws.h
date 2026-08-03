@@ -18,8 +18,7 @@ public:
 private:
 	// AWS Signature V4 helper functions
 	std::string createSigningKey(const std::string &date_stamp) const;
-	std::string calculateSignature(const std::string &string_to_sign,
-				       const std::string &signing_key) const;
+	std::string calculateSignature(const std::string &string_to_sign, const std::string &signing_key) const;
 	std::string getSignedHeaders(const std::map<std::string, std::string> &headers) const;
 	std::string sha256(const std::string &str) const;
 	std::string hmacSha256(const std::string &key, const std::string &data) const;

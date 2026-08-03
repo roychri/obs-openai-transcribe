@@ -6,8 +6,7 @@ class CurlHelper; // Forward declaration
 
 class OpenAITranslator : public ITranslator {
 public:
-	explicit OpenAITranslator(const std::string &api_key,
-				  const std::string &model = "gpt-4-turbo-preview");
+	explicit OpenAITranslator(const std::string &api_key, const std::string &model = "gpt-4-turbo-preview");
 	~OpenAITranslator() override;
 
 	std::string translate(const std::string &text, const std::string &target_lang,

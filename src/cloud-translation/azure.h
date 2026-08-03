@@ -6,9 +6,8 @@ class CurlHelper; // Forward declaration
 
 class AzureTranslator : public ITranslator {
 public:
-	AzureTranslator(
-		const std::string &api_key, const std::string &location = "",
-		const std::string &endpoint = "https://api.cognitive.microsofttranslator.com");
+	AzureTranslator(const std::string &api_key, const std::string &location = "",
+			const std::string &endpoint = "https://api.cognitive.microsofttranslator.com");
 	~AzureTranslator() override;
 
 	std::string translate(const std::string &text, const std::string &target_lang,

@@ -16,9 +16,8 @@ public:
 			      const std::string &source_lang = "auto") override;
 
 private:
-	std::string
-	replacePlaceholders(const std::string &template_str,
-			    const std::unordered_map<std::string, std::string> &values) const;
+	std::string replacePlaceholders(const std::string &template_str,
+					const std::unordered_map<std::string, std::string> &values) const;
 	std::string parseResponse(const std::string &response_str);
 
 	std::string endpoint_;

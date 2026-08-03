@@ -24,75 +24,74 @@ PapagoTranslator::PapagoTranslator(const std::string &client_id, const std::stri
 
 PapagoTranslator::~PapagoTranslator() = default;
 
-bool PapagoTranslator::isLanguagePairSupported(const std::string &source,
-					       const std::string &target) const
+bool PapagoTranslator::isLanguagePairSupported(const std::string &source, const std::string &target) const
 {
-	static const std::unordered_set<std::pair<std::string, std::string>, LanguagePairHash>
-		supported_pairs = {// Korean pairs
-				   {"ko", "en"},
-				   {"en", "ko"},
-				   {"ko", "ja"},
-				   {"ja", "ko"},
-				   {"ko", "zh-CN"},
-				   {"zh-CN", "ko"},
-				   {"ko", "zh-TW"},
-				   {"zh-TW", "ko"},
-				   {"ko", "vi"},
-				   {"vi", "ko"},
-				   {"ko", "th"},
-				   {"th", "ko"},
-				   {"ko", "id"},
-				   {"id", "ko"},
-				   {"ko", "fr"},
-				   {"fr", "ko"},
-				   {"ko", "es"},
-				   {"es", "ko"},
-				   {"ko", "ru"},
-				   {"ru", "ko"},
-				   {"ko", "de"},
-				   {"de", "ko"},
-				   {"ko", "it"},
-				   {"it", "ko"},
+	static const std::unordered_set<std::pair<std::string, std::string>, LanguagePairHash> supported_pairs = {
+		// Korean pairs
+		{"ko", "en"},
+		{"en", "ko"},
+		{"ko", "ja"},
+		{"ja", "ko"},
+		{"ko", "zh-CN"},
+		{"zh-CN", "ko"},
+		{"ko", "zh-TW"},
+		{"zh-TW", "ko"},
+		{"ko", "vi"},
+		{"vi", "ko"},
+		{"ko", "th"},
+		{"th", "ko"},
+		{"ko", "id"},
+		{"id", "ko"},
+		{"ko", "fr"},
+		{"fr", "ko"},
+		{"ko", "es"},
+		{"es", "ko"},
+		{"ko", "ru"},
+		{"ru", "ko"},
+		{"ko", "de"},
+		{"de", "ko"},
+		{"ko", "it"},
+		{"it", "ko"},
 
-				   // English pairs
-				   {"en", "ja"},
-				   {"ja", "en"},
-				   {"en", "zh-CN"},
-				   {"zh-CN", "en"},
-				   {"en", "zh-TW"},
-				   {"zh-TW", "en"},
-				   {"en", "vi"},
-				   {"vi", "en"},
-				   {"en", "th"},
-				   {"th", "en"},
-				   {"en", "id"},
-				   {"id", "en"},
-				   {"en", "fr"},
-				   {"fr", "en"},
-				   {"en", "es"},
-				   {"es", "en"},
-				   {"en", "ru"},
-				   {"ru", "en"},
-				   {"en", "de"},
-				   {"de", "en"},
+		// English pairs
+		{"en", "ja"},
+		{"ja", "en"},
+		{"en", "zh-CN"},
+		{"zh-CN", "en"},
+		{"en", "zh-TW"},
+		{"zh-TW", "en"},
+		{"en", "vi"},
+		{"vi", "en"},
+		{"en", "th"},
+		{"th", "en"},
+		{"en", "id"},
+		{"id", "en"},
+		{"en", "fr"},
+		{"fr", "en"},
+		{"en", "es"},
+		{"es", "en"},
+		{"en", "ru"},
+		{"ru", "en"},
+		{"en", "de"},
+		{"de", "en"},
 
-				   // Japanese pairs
-				   {"ja", "zh-CN"},
-				   {"zh-CN", "ja"},
-				   {"ja", "zh-TW"},
-				   {"zh-TW", "ja"},
-				   {"ja", "vi"},
-				   {"vi", "ja"},
-				   {"ja", "th"},
-				   {"th", "ja"},
-				   {"ja", "id"},
-				   {"id", "ja"},
-				   {"ja", "fr"},
-				   {"fr", "ja"},
+		// Japanese pairs
+		{"ja", "zh-CN"},
+		{"zh-CN", "ja"},
+		{"ja", "zh-TW"},
+		{"zh-TW", "ja"},
+		{"ja", "vi"},
+		{"vi", "ja"},
+		{"ja", "th"},
+		{"th", "ja"},
+		{"ja", "id"},
+		{"id", "ja"},
+		{"ja", "fr"},
+		{"fr", "ja"},
 
-				   // Chinese pairs
-				   {"zh-CN", "zh-TW"},
-				   {"zh-TW", "zh-CN"}};
+		// Chinese pairs
+		{"zh-CN", "zh-TW"},
+		{"zh-TW", "zh-CN"}};
 
 	// Special case for auto detection
 	if (source == "auto") {
@@ -110,17 +109,14 @@ std::string PapagoTranslator::translate(const std::string &text, const std::stri
 	}
 
 	std::string target_lang_valid = target_lang;
-	target_lang_valid.erase(std::remove(target_lang_valid.begin(), target_lang_valid.end(),
-					    '_'),
+	target_lang_valid.erase(std::remove(target_lang_valid.begin(), target_lang_valid.end(), '_'),
 				target_lang_valid.end());
 
 	if (!isLanguagePairSupported(source_lang, target_lang_valid)) {
-		throw TranslationError("Unsupported language pair: " + source_lang + " to " +
-				       target_lang);
+		throw TranslationError("Unsupported language pair: " + source_lang + " to " + target_lang);
 	}
 
-	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(),
-								 curl_easy_cleanup);
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), curl_easy_cleanup);
 
 	if (!curl) {
 		throw TranslationError("Failed to initialize CURL session");
@@ -133,18 +129,14 @@ std::string PapagoTranslator::translate(const std::string &text, const std::stri
 		std::string url = "https://naveropenapi.apigw.ntruss.com/nmt/v1/translation";
 
 		// Create request body
-		json request_body = {{"source", source_lang},
-				     {"target", target_lang_valid},
-				     {"text", text}};
+		json request_body = {{"source", source_lang}, {"target", target_lang_valid}, {"text", text}};
 		std::string payload = request_body.dump();
 
 		// Set up headers
 		struct curl_slist *headers = nullptr;
 		headers = curl_slist_append(headers, "Content-Type: application/json");
-		headers = curl_slist_append(headers,
-					    ("X-NCP-APIGW-API-KEY-ID: " + client_id_).c_str());
-		headers = curl_slist_append(headers,
-					    ("X-NCP-APIGW-API-KEY: " + client_secret_).c_str());
+		headers = curl_slist_append(headers, ("X-NCP-APIGW-API-KEY-ID: " + client_id_).c_str());
+		headers = curl_slist_append(headers, ("X-NCP-APIGW-API-KEY: " + client_secret_).c_str());
 
 		// Set up CURL request
 		curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
@@ -164,8 +156,7 @@ std::string PapagoTranslator::translate(const std::string &text, const std::stri
 		curl_slist_free_all(headers);
 
 		if (res != CURLE_OK) {
-			throw TranslationError(std::string("CURL request failed: ") +
-					       curl_easy_strerror(res));
+			throw TranslationError(std::string("CURL request failed: ") + curl_easy_strerror(res));
 		}
 
 		// Check HTTP response code

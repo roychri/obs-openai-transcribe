@@ -5,8 +5,7 @@
 
 using json = nlohmann::json;
 
-AzureTranslator::AzureTranslator(const std::string &api_key, const std::string &location,
-				 const std::string &endpoint)
+AzureTranslator::AzureTranslator(const std::string &api_key, const std::string &location, const std::string &endpoint)
 	: api_key_(api_key),
 	  location_(location),
 	  endpoint_(endpoint),
@@ -19,8 +18,7 @@ AzureTranslator::~AzureTranslator() = default;
 std::string AzureTranslator::translate(const std::string &text, const std::string &target_lang,
 				       const std::string &source_lang)
 {
-	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(),
-								 curl_easy_cleanup);
+	std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> curl(curl_easy_init(), curl_easy_cleanup);
 
 	if (!curl) {
 		throw TranslationError("Failed to initialize CURL session");
@@ -79,8 +77,7 @@ std::string AzureTranslator::translate(const std::string &text, const std::strin
 		curl_slist_free_all(headers);
 
 		if (res != CURLE_OK) {
-			throw TranslationError(std::string("CURL request failed: ") +
-					       curl_easy_strerror(res));
+			throw TranslationError(std::string("CURL request failed: ") + curl_easy_strerror(res));
 		}
 
 		return parseResponse(response);
@@ -98,8 +95,7 @@ std::string AzureTranslator::parseResponse(const std::string &response_str)
 		// Check for error response
 		if (response.contains("error")) {
 			const auto &error = response["error"];
-			throw TranslationError("Azure API Error: " +
-					       error.value("message", "Unknown error"));
+			throw TranslationError("Azure API Error: " + error.value("message", "Unknown error"));
 		}
 
 		// Azure returns an array of translations

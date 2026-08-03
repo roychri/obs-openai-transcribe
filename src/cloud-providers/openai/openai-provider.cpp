@@ -29,8 +29,7 @@ std::string base64Encode(const uint8_t *data, size_t len)
 
 	size_t i = 0;
 	for (; i + 2 < len; i += 3) {
-		const uint32_t n = (uint32_t(data[i]) << 16) | (uint32_t(data[i + 1]) << 8) |
-				   uint32_t(data[i + 2]);
+		const uint32_t n = (uint32_t(data[i]) << 16) | (uint32_t(data[i + 1]) << 8) | uint32_t(data[i + 2]);
 		out.push_back(kB64Alphabet[(n >> 18) & 0x3F]);
 		out.push_back(kB64Alphabet[(n >> 12) & 0x3F]);
 		out.push_back(kB64Alphabet[(n >> 6) & 0x3F]);
@@ -103,8 +102,7 @@ bool OpenAIProvider::init()
 
 	// Deliberately do not connect here. The socket is opened on first audio so an
 	// enabled-but-silent filter does not bill.
-	obs_log(LOG_INFO, "OpenAI provider ready (model %s, %d Hz), connecting on first audio",
-		kModel, kSampleRate);
+	obs_log(LOG_INFO, "OpenAI provider ready (model %s, %d Hz), connecting on first audio", kModel, kSampleRate);
 	return true;
 }
 
@@ -120,23 +118,21 @@ bool OpenAIProvider::connect()
 		net::connect(beast::get_lowest_layer(*stream), results);
 
 		if (!SSL_set_tlsext_host_name(stream->next_layer().native_handle(), kHost)) {
-			throw beast::system_error(
-				beast::error_code(static_cast<int>(::ERR_get_error()),
-						  net::error::get_ssl_category()),
-				"Failed to set SNI hostname");
+			throw beast::system_error(beast::error_code(static_cast<int>(::ERR_get_error()),
+								    net::error::get_ssl_category()),
+						  "Failed to set SNI hostname");
 		}
 
 		stream->next_layer().handshake(ssl::stream_base::client);
 
 		const std::string api_key = gf->cloud_provider_api_key;
-		stream->set_option(websocket::stream_base::decorator(
-			[api_key](websocket::request_type &req) {
-				// Authorization only. Sending the old `OpenAI-Beta: realtime=v1`
-				// header gets the connection closed with 4000
-				// invalid_request_error.beta_api_shape_disabled (verified
-				// 2026-08-03).
-				req.set(http::field::authorization, "Bearer " + api_key);
-			}));
+		stream->set_option(websocket::stream_base::decorator([api_key](websocket::request_type &req) {
+			// Authorization only. Sending the old `OpenAI-Beta: realtime=v1`
+			// header gets the connection closed with 4000
+			// invalid_request_error.beta_api_shape_disabled (verified
+			// 2026-08-03).
+			req.set(http::field::authorization, "Bearer " + api_key);
+		}));
 
 		stream->handshake(kHost, kTarget);
 		// All frames we send are JSON text, not binary audio.
@@ -196,8 +192,7 @@ bool OpenAIProvider::sendSessionUpdate()
 	// code. Empty / "auto" means let the model detect it - omit the hint entirely.
 	if (!gf->language.empty() && gf->language != "auto") {
 		auto it = language_codes_from_underscore.find(gf->language);
-		const std::string iso = (it != language_codes_from_underscore.end()) ? it->second
-										    : gf->language;
+		const std::string iso = (it != language_codes_from_underscore.end()) ? it->second : gf->language;
 		if (!iso.empty()) {
 			transcription["languages"] = json::array({iso});
 		}
@@ -256,8 +251,7 @@ void OpenAIProvider::sendAudioBufferToTranscription(const std::deque<float> &aud
 	}
 
 	const std::string encoded =
-		base64Encode(reinterpret_cast<const uint8_t *>(pcm.data()),
-			     pcm.size() * sizeof(int16_t));
+		base64Encode(reinterpret_cast<const uint8_t *>(pcm.data()), pcm.size() * sizeof(int16_t));
 
 	json frame = {{"type", "input_audio_buffer.append"}, {"audio", encoded}};
 
@@ -328,8 +322,8 @@ void OpenAIProvider::handleEvent(const std::string &message)
 		current_item_id.clear();
 	} else if (type == "error") {
 		const auto err = event.value("error", json::object());
-		obs_log(LOG_ERROR, "OpenAI realtime error: %s (%s)",
-			err.value("message", "unknown").c_str(), err.value("code", "").c_str());
+		obs_log(LOG_ERROR, "OpenAI realtime error: %s (%s)", err.value("message", "unknown").c_str(),
+			err.value("code", "").c_str());
 	} else if (type == "session.updated") {
 		obs_log(gf->log_level, "OpenAI session configured");
 	}
@@ -344,9 +338,8 @@ namespace {
 // caption splits after "Dr." and flashes a two-word line.
 bool endsWithAbbreviation(const std::string &s, size_t period_pos)
 {
-	static const char *abbrevs[] = {"mr",  "mrs", "ms",  "dr",   "st",  "jr",
-					"sr",  "vs",  "etc", "prof", "inc", "ltd",
-					"no",  "fig", "approx"};
+	static const char *abbrevs[] = {"mr",  "mrs",  "ms",  "dr",  "st", "jr",  "sr",    "vs",
+					"etc", "prof", "inc", "ltd", "no", "fig", "approx"};
 
 	size_t start = period_pos;
 	while (start > 0 && (isalpha((unsigned char)s[start - 1]) != 0)) {
@@ -479,8 +472,7 @@ void OpenAIProvider::emit(const std::string &text, bool final)
 	// gpt-live-transcribe does not return word timestamps, so subtitle timing is
 	// filter-side wall-clock. Good enough for live captions; not for authored SRT.
 	const uint64_t now = now_ms();
-	result.start_timestamp_ms = now > gf->start_timestamp_ms ? now - gf->start_timestamp_ms
-								 : 0;
+	result.start_timestamp_ms = now > gf->start_timestamp_ms ? now - gf->start_timestamp_ms : 0;
 	result.end_timestamp_ms = result.start_timestamp_ms;
 
 	transcription_callback(result);
@@ -499,10 +491,8 @@ void OpenAIProvider::onIdleTick()
 		{
 			std::lock_guard<std::mutex> lock(pending_mutex);
 			if (!pending_text.empty()) {
-				const auto since = std::chrono::duration_cast<
-							   std::chrono::milliseconds>(
-							   std::chrono::steady_clock::now() -
-							   last_delta)
+				const auto since = std::chrono::duration_cast<std::chrono::milliseconds>(
+							   std::chrono::steady_clock::now() - last_delta)
 							   .count();
 				stale = since >= kFinalizeSilenceMs;
 			}
@@ -517,9 +507,9 @@ void OpenAIProvider::onIdleTick()
 		return; // user disabled the idle disconnect
 	}
 
-	const auto idle = std::chrono::duration_cast<std::chrono::seconds>(
-				  std::chrono::steady_clock::now() - last_audio_sent)
-				  .count();
+	const auto idle =
+		std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - last_audio_sent)
+			.count();
 	if (idle >= timeout) {
 		disconnect("idle timeout");
 	}

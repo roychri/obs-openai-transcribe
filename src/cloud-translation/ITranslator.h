@@ -19,8 +19,7 @@ public:
 };
 
 // Factory function declaration
-std::unique_ptr<ITranslator> createTranslator(const std::string &provider,
-					      const std::string &api_key,
+std::unique_ptr<ITranslator> createTranslator(const std::string &provider, const std::string &api_key,
 					      const std::string &location = "");
 
 inline std::string sanitize_language_code(const std::string &lang_code)
