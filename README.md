@@ -80,8 +80,9 @@ output would never fire at all, since both are gated on a finalised line.
 
 ## Status
 
-The wire protocol is verified against the live API; the C++ has not been compiled yet.
-See `PLAN_OPENAI_FORK.md` for details and what remains.
+Builds green on CI (Windows x64 installer artifact), and the wire protocol is verified
+against the live API. **Not yet run inside OBS** - that is the next step. See
+`PLAN_OPENAI_FORK.md` for details and what remains.
 
 ## License
 

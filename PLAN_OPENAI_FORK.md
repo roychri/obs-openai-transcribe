@@ -65,7 +65,7 @@ This box is **aarch64 Linux with no OBS** — a Windows x64 plugin cannot be bui
   only; leaving it intact keeps the door open without extra work now).
 - Drop `src/timed-metadata/` if it pulls aws-sdk — check before deleting.
 
-### 2. Rebase onto OBS 32.2.x — ⚠️ partial
+### 2. Rebase onto OBS 32.2.x — ✅ done (on 31.1.1, see below)
 `buildspec.json` was moved from **OBS 30.1.2 → 31.1.1** with obs-deps/Qt6 bumped to
 `2025-07-11`, matching `obsproject/obs-plugintemplate` master (checked 2026-08-03).
 
@@ -197,3 +197,35 @@ Transcription came back clean and accurate. Four things contradicted the plan as
 - No word timestamps from `gpt-live-transcribe`, so SRT output will fall back to
   filter-side wall-clock timing rather than model timestamps. Acceptable for live captions;
   if real SRT timing matters, that's a `whisper-1` post-pass on the recording.
+
+## Build status (2026-08-03)
+
+CI is green on Windows x64 and uploads an installer artifact. Getting there took nine
+runs; five failures were build-system, one was a real bug in the new code, and two were
+latent cloudvocal bugs that warnings-as-errors exposed.
+
+Worth knowing before touching the build again:
+
+- **The template sync reverts every cloudvocal-specific setting.** Taking
+  `obs-plugintemplate` wholesale fixed the OBS SDK, but silently dropped the Conan install
+  step from `.github/actions/build-plugin` and flipped `ENABLE_FRONTEND_API` back to false
+  in `CMakePresets.json`. Re-check both after any future sync.
+- **`.gitignore` is an allowlist** (`/*` plus exceptions). Anything new — `tools/`,
+  `.gersemirc`, docs — is silently untracked until explicitly un-ignored. This bit three
+  times; check `git status --ignored` after adding files.
+- **gersemi is pinned to 0.21.0** in `.github/actions/run-gersemi`, installed from PyPI
+  because the `obsproject/tools` tap formula fails on current Homebrew. The pin is
+  load-bearing: 0.28.0 reformats files that 0.21.0 considers clean.
+- **Keep `CMAKE_COMPILE_WARNING_AS_ERROR`.** It caught a refcount trap around the
+  deprecated `obs_scene_sceneitem_from_source` and a `size_t`→`int` narrowing in the HMAC
+  path. `LNK4099` from Conan's PDB-less OpenSSL is suppressed narrowly instead.
+
+### Still open
+
+- **Never run inside OBS.** Compiling and linking says nothing about whether captions
+  render, the idle disconnect behaves, or CEA-608 embedding works.
+- **Built against OBS 31.1.1, not 32.2.1** — see step 2. If the plugin fails to load in
+  32.2.1, that is the first thing to change.
+- **curl is still in the build** only because `cloud-translation` and `timed-metadata`
+  still compile. Neither is reachable in v1. Dropping them removes curl and its prebuilt
+  third-party fetch entirely.
