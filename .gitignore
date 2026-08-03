@@ -7,6 +7,8 @@
 !/cmake
 !/data
 !/src
+!/tools
+!PLAN_OPENAI_FORK.md
 !.clang-format
 !.cmake-format.json
 !.gitignore
@@ -23,6 +25,10 @@
 
 # Exclude macOS legacy resource forks
 .DS_Store
+
+# Exclude Python bytecode from tools/
+__pycache__/
+*.pyc
 
 # Exclude CMake build number cache
 /cmake/.CMakeBuildNumber
