@@ -79,22 +79,6 @@ recompilation and new Windows DLL policy — not new headers.
 `obs-studio.version` to 32.2.1 and compute the tarball SHA-256 ourselves. Don't do this
 speculatively.
 
-## API key handling
-
-The key is **an OBS filter setting**, not a repo artefact. Concretely:
-
-- **Not in source**, not in `.env`, not a GitHub secret. Nothing to configure before build.
-- Entered at runtime in the OBS filter's **API Key** field
-  (`transcription_cloud_provider_api_key`, rendered `OBS_TEXT_PASSWORD` so it is masked in
-  the UI). Read into `gf->cloud_provider_api_key` and sent as
-  `Authorization: Bearer <key>` on the WebSocket upgrade.
-- OBS persists it **in plaintext** in the scene-collection JSON under
-  `%APPDATA%\obs-studio\basic\scenes\*.json`. Same as every other OBS plugin credential,
-  but worth knowing before sharing a scene collection or a screen recording of settings.
-- CI never needs it — there are no integration tests in the build.
-- The only other place it is needed is the off-OBS smoke client (verification step 2),
-  which reads `OPENAI_API_KEY` from the environment.
-
 ### 3. Make the sample rate provider-driven ✅ done
 `TRANSCRIPTION_SAMPLE_RATE` is baked in at 16 kHz; OpenAI wants **24 kHz PCM16 mono**.
 Replace the macro with a rate carried on `cloudvocal_data` (set from the selected
@@ -140,6 +124,22 @@ Billing is **session wall-clock, not speech** — an idle open socket bills $1.0
 idle timeout that closes the WS after N seconds with no audio (source muted / scene
 inactive) and reconnects lazily on the next buffer. Also honour the existing
 `process_while_muted` flag by not opening the socket at all while muted.
+
+## API key handling
+
+The key is **an OBS filter setting**, not a repo artefact. Concretely:
+
+- **Not in source**, not in `.env`, not a GitHub secret. Nothing to configure before build.
+- Entered at runtime in the OBS filter's **API Key** field
+  (`transcription_cloud_provider_api_key`, rendered `OBS_TEXT_PASSWORD` so it is masked in
+  the UI). Read into `gf->cloud_provider_api_key` and sent as
+  `Authorization: Bearer <key>` on the WebSocket upgrade.
+- OBS persists it **in plaintext** in the scene-collection JSON under
+  `%APPDATA%\obs-studio\basic\scenes\*.json`. Same as every other OBS plugin credential,
+  but worth knowing before sharing a scene collection or a screen recording of settings.
+- CI never needs it — there are no integration tests in the build.
+- The only other place it is needed is the off-OBS smoke client (verification step 2),
+  which reads `OPENAI_API_KEY` from the environment.
 
 ## Verified against the live API (2026-08-03)
 
