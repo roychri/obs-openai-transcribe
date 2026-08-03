@@ -42,7 +42,8 @@ std::string hmacSha256(const std::string &key, const std::string &data, bool isH
 		keyBytes.assign(key.begin(), key.end());
 	}
 
-	if (!HMAC(EVP_sha256(), keyBytes.data(), keyBytes.size(), (unsigned char *)data.c_str(),
+	// HMAC takes the key length as int; keyBytes is small (a hex or raw API key).
+	if (!HMAC(EVP_sha256(), keyBytes.data(), (int)keyBytes.size(), (unsigned char *)data.c_str(),
 		  data.length(), digest, (unsigned int *)&len)) {
 		obs_log(LOG_ERROR, "hmacSha256 failed during HMAC operation");
 		return {};

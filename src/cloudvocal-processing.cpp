@@ -1,6 +1,8 @@
 
 #include "cloudvocal-processing.h"
 #include "cloudvocal-data.h"
+// convert_speaker_layout(), used by ensure_resampler()
+#include "cloudvocal-utils.h"
 
 #include <obs-module.h>
 #include <obs.h>

@@ -23,8 +23,11 @@ void create_obs_text_source_if_needed()
 	source = obs_source_create("text_ft2_source_v2", "CloudVocal Subtitles", nullptr, nullptr);
 #endif
 	if (source) {
-		// add source to the current scene
-		obs_scene_add(scene, source);
+		// add source to the current scene. The returned item is owned by the scene,
+		// so it must not be released - unlike the deprecated
+		// obs_scene_sceneitem_from_source() lookup this replaces, which returned a
+		// new reference.
+		obs_sceneitem_t *source_sceneitem = obs_scene_add(scene, source);
 		// set source settings
 		obs_data_t *source_settings = obs_source_get_settings(source);
 		obs_data_set_bool(source_settings, "word_wrap", true);
@@ -56,9 +59,9 @@ void create_obs_text_source_if_needed()
 		transform_info.scale.x = 1.0;
 		transform_info.scale.y = 1.0;
 		transform_info.rot = 0.0;
-		obs_sceneitem_t *source_sceneitem = obs_scene_sceneitem_from_source(scene, source);
-		obs_sceneitem_set_info2(source_sceneitem, &transform_info);
-		obs_sceneitem_release(source_sceneitem);
+		if (source_sceneitem != nullptr) {
+			obs_sceneitem_set_info2(source_sceneitem, &transform_info);
+		}
 
 		obs_source_release(source);
 	}
