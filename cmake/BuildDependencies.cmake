@@ -53,3 +53,10 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${DEPS_INCLUDE_DIRS})
 # Link libraries
 target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE ${DEPS_LIB_DIRS})
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE ${DEPS_LIBRARIES})
+
+if(MSVC)
+  # Conan's OpenSSL ships no PDBs, so the linker emits LNK4099 for every static lib
+  # object. CI links with /WX, which turns that into LNK1218 and produces no binary.
+  # Silence just this warning rather than dropping warnings-as-errors for our own code.
+  target_link_options(${CMAKE_PROJECT_NAME} PRIVATE /IGNORE:4099)
+endif()
