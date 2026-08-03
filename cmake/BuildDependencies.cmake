@@ -7,12 +7,7 @@ find_package(Boost CONFIG REQUIRED)
 find_package(OpenSSL CONFIG REQUIRED)
 find_package(ZLIB CONFIG REQUIRED PATHS ${CMAKE_SOURCE_DIR}/build_conan NO_DEFAULT_PATH)
 
-list(
-  APPEND
-  DEPS_LIBRARIES
-  openssl::openssl
-  ${openssl_LIBS_RELEASE}
-  ${zlib_LIBS_RELEASE})
+list(APPEND DEPS_LIBRARIES openssl::openssl ${openssl_LIBS_RELEASE} ${zlib_LIBS_RELEASE})
 
 if(WIN32)
   list(
@@ -23,25 +18,16 @@ if(WIN32)
     bcrypt
     advapi32
     user32
-    shlwapi)
+    shlwapi
+  )
 endif()
 if(APPLE)
   list(APPEND DEPS_LIBRARIES resolv)
 endif()
 
-list(
-  APPEND
-  DEPS_LIB_DIRS
-  ${openssl_LIB_DIRS_RELEASE}
-  ${zlib_LIB_DIRS_RELEASE}
-  ${boost_LIB_DIRS_RELEASE})
+list(APPEND DEPS_LIB_DIRS ${openssl_LIB_DIRS_RELEASE} ${zlib_LIB_DIRS_RELEASE} ${boost_LIB_DIRS_RELEASE})
 
-list(
-  APPEND
-  DEPS_INCLUDE_DIRS
-  ${Boost_INCLUDE_DIRS}
-  ${openssl_INCLUDE_DIRS_RELEASE}
-  ${zlib_INCLUDE_DIRS_RELEASE})
+list(APPEND DEPS_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} ${openssl_INCLUDE_DIRS_RELEASE} ${zlib_INCLUDE_DIRS_RELEASE})
 
 message(STATUS "Dependencies include directories: ${DEPS_INCLUDE_DIRS}")
 message(STATUS "Dependencies library directories: ${DEPS_LIB_DIRS}")

@@ -50,7 +50,11 @@ runs:
         if (( ${+RUNNER_DEBUG} )) setopt XTRACE
 
         print ::group::Install gersemi
-        brew install --quiet obsproject/tools/gersemi
+        # Installed from PyPI rather than obsproject/tools, whose formula fails on the
+        # runner's current Homebrew with "unknown install step: run". Pinned to the same
+        # version the tap packages - gersemi's output is not stable across releases, so
+        # a floating version would flag files that are correctly formatted.
+        pip3 install --quiet 'gersemi==0.21.0'
         print ::endgroup::
 
         print ::group::Run gersemi
