@@ -23,22 +23,44 @@ caption track.
 
 ## Install
 
-The plugin is not released yet, so grab a CI build:
+No release yet, so take a CI build. The paths below are confirmed working — the plugin
+loads and appears in OBS's audio filter list with them.
 
-1. Open the [Actions tab](https://github.com/roychri/obs-openai-transcribe/actions),
-   click the most recent green run, and download the
-   `obs-openai-transcribe-<version>-windows-x64-<hash>` artifact.
-2. Unzip it. Inside is an installer `.exe` plus a loose `obs-plugins/` and `data/` tree.
-3. Either run the installer, or copy the two folders over your OBS install so the files
-   land next to the ones already there:
+1. Go to the [Actions tab](https://github.com/roychri/obs-openai-transcribe/actions) and
+   open a run whose **Build for Windows** job succeeded. Do not filter on the run's overall
+   status: the format check is red for reasons unrelated to the binary, so a run can show
+   ✗ and still have a perfectly good artifact. Expand the run, confirm the Windows job has
+   a green tick, then scroll to **Artifacts** at the bottom of the page.
+2. Download `obs-openai-transcribe-<version>-windows-x64-<hash>`.
+3. **It is a zip inside a zip.** GitHub wraps every artifact, so unzip twice. There is no
+   installer `.exe`. The inner zip contains:
+   ```
+   obs-openai-transcribe/
+     bin/64bit/obs-openai-transcribe.dll     <- the plugin
+     bin/64bit/obs-openai-transcribe.pdb     <- debug symbols, not needed
+     data/locale/en-US.ini
+     data/roots.pem
+   ```
+4. Copy the files into your OBS install. **Note the folder names do not match** — the
+   artifact says `bin/64bit`, OBS wants `obs-plugins/64bit`, and the `data` contents go
+   under a folder you create yourself named after the plugin:
    ```
    C:\Program Files\obs-studio\obs-plugins\64bit\obs-openai-transcribe.dll
-   C:\Program Files\obs-studio\data\obs-plugins\obs-openai-transcribe\
+   C:\Program Files\obs-studio\data\obs-plugins\obs-openai-transcribe\locale\en-US.ini
+   C:\Program Files\obs-studio\data\obs-plugins\obs-openai-transcribe\roots.pem
    ```
-4. Restart OBS. If it loaded, `OpenAI Live Transcription` appears in the audio filter list
-   (step 3 below) and the log mentions the module by name.
+   Writing into `Program Files` needs **Administrator** — accept the elevation prompt.
+5. Restart OBS. **OpenAI Live Transcription** should now appear in the audio filter list.
 
-To uninstall, delete those two paths and restart OBS.
+### If the filter is missing or misnamed
+
+| Symptom | Cause |
+|---|---|
+| Filter absent from the `+` list | The DLL is not where OBS looks. Re-check the `obs-plugins\64bit` path. |
+| Filter shows as `cloudvocalAudioFilter` | The DLL loaded but `en-US.ini` did not. Check the `data\obs-plugins\obs-openai-transcribe\locale\` path. |
+| Filter shows as **CloudVocal Captions** | Both loaded fine, but from a build older than 2026-08-03. Download a newer artifact — older builds also have a caption-source bug that sends captions nowhere. |
+
+To uninstall, delete the DLL and the `obs-openai-transcribe` data folder, then restart OBS.
 
 ## Get an API key
 
