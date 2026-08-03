@@ -27,6 +27,23 @@ inputs:
 runs:
   using: composite
   steps:
+    # cloudvocal needs Conan for Boost.Beast + OpenSSL. The upstream plugintemplate
+    # action has no Conan step, so this has to be re-added after every template sync.
+    - name: Install Conan 🪓
+      id: conan
+      uses: turtlebrowser/get-conan@main
+
+    - name: Build Conan Dependencies 🛠️
+      shell: bash
+      run: |
+        : Build Conan Dependencies 🛠️
+        echo ::group::Conan install
+        conan profile detect --force
+        conan install "${{ github.workspace }}" \
+          --output-folder="${{ github.workspace }}/build_conan" \
+          --build=missing -g CMakeDeps
+        echo ::endgroup::
+
     - name: Run macOS Build
       if: runner.os == 'macOS'
       shell: zsh --no-rcs --errexit --pipefail {0}
