@@ -1,73 +1,38 @@
-name: 'Set up and build plugin'
-description: 'Builds the plugin for specified architecture and build config'
+name: Set up and build plugin
+description: Builds the plugin for specified architecture and build config
 inputs:
   target:
-    description: 'Target architecture for dependencies'
+    description: Target architecture for dependencies
     required: true
   config:
-    description: 'Build configuration'
+    description: Build configuration
     required: false
-    default: 'RelWithDebInfo'
+    default: RelWithDebInfo
   codesign:
-    description: 'Enable codesigning (macOS only)'
+    description: Enable codesigning (macOS only)
     required: false
     default: 'false'
   codesignIdent:
-    description: 'Developer ID for application codesigning (macOS only)'
+    description: Developer ID for application codesigning (macOS only)
     required: false
     default: '-'
+  codesignTeam:
+    description: Team ID for application codesigning (macOS only)
+    required: false
+    default: ''
   workingDirectory:
-    description: 'Working directory for packaging'
+    description: Working directory for packaging
     required: false
     default: ${{ github.workspace }}
 runs:
   using: composite
   steps:
-    - name: Install Python 🐍
-      uses: actions/setup-python@v5
-      if: runner.os == 'Linux' || runner.os == 'macOS'
-      with:
-        python-version: '3.10'
-
-    - name: Install Conan 🪓
-      id: conan
-      uses: turtlebrowser/get-conan@main
-
-    - name: Install Dependencies 🛍️
-      if: runner.os == 'Linux'
-      shell: bash
-      run: |
-        : Install Dependencies 🛍️
-        echo ::group::Install Dependencies
-        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-        echo "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
-        brew install --quiet zsh
-        echo ::endgroup::
-
-    - name: Build Dependencies 🛠️
-      if: runner.os == 'Linux' || runner.os == 'macOS'
-      shell: bash
-      run: |
-        : Build Dependencies 🛠️
-        echo ::group::Build Dependencies
-        conan profile detect --force
-        conan install ${{github.workspace}} --output-folder=${{github.workspace}}/build_conan --build=missing -g CMakeDeps
-        echo ::endgroup::
-
-    - name: Build Windows Dependencies 🛠️
-      if: runner.os == 'Windows'
-      shell: pwsh
-      run: |
-        Write-Host "::group::Build Windows Dependencies"
-        conan profile detect --force
-        conan install ${{github.workspace}} --output-folder=${{github.workspace}}/build_conan --build=missing -g CMakeDeps
-        Write-Host "::endgroup::"
-
     - name: Run macOS Build
       if: runner.os == 'macOS'
       shell: zsh --no-rcs --errexit --pipefail {0}
       working-directory: ${{ inputs.workingDirectory }}
       env:
+        CCACHE_DIR: ${{ inputs.workingDirectory }}/.ccache
         CODESIGN_IDENT: ${{ inputs.codesignIdent }}
         CODESIGN_TEAM: ${{ inputs.codesignTeam }}
       run: |
@@ -80,20 +45,33 @@ runs:
 
         .github/scripts/build-macos ${build_args}
 
+    - name: Install Dependencies 🛍️
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        : Install Dependencies 🛍️
+        echo ::group::Install Dependencies
+        eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+        echo "/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin" >> $GITHUB_PATH
+        brew install --quiet zsh
+        echo ::endgroup::
+
     - name: Run Ubuntu Build
       if: runner.os == 'Linux'
       shell: zsh --no-rcs --errexit --pipefail {0}
       working-directory: ${{ inputs.workingDirectory }}
+      env:
+        CCACHE_DIR: ${{ inputs.workingDirectory }}/.ccache
       run: |
         : Run Ubuntu Build
 
         local -a build_args=(
-          --target linux-${{ inputs.target }}
+          --target ubuntu-${{ inputs.target }}
           --config ${{ inputs.config }}
         )
         if (( ${+RUNNER_DEBUG} )) build_args+=(--debug)
 
-        .github/scripts/build-linux ${build_args}
+        .github/scripts/build-ubuntu ${build_args}
 
     - name: Run Windows Build
       if: runner.os == 'Windows'
@@ -115,7 +93,7 @@ runs:
       if: contains(fromJSON('["Linux", "macOS"]'),runner.os)
       shell: zsh --no-rcs --errexit --pipefail {0}
       env:
-        CCACHE_CONFIGPATH: ${{ inputs.workingDirectory }}/.ccache.conf
+        CCACHE_DIR: ${{ inputs.workingDirectory }}/.ccache
       run: |
         : Create Summary 📊
 
