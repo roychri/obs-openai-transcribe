@@ -328,8 +328,8 @@ void *cloudvocal_create(obs_data_t *settings, obs_source_t *filter)
 	    strcmp(subtitle_sources, "none") == 0 || strcmp(subtitle_sources, "(null)") == 0) {
 		obs_log(gf->log_level, "Create text source");
 		create_obs_text_source_if_needed();
-		gf->text_source_name = "cloudvocal Subtitles";
-		obs_data_set_string(settings, "subtitle_sources", "cloudvocal Subtitles");
+		gf->text_source_name = CAPTIONS_TEXT_SOURCE_NAME;
+		obs_data_set_string(settings, "subtitle_sources", CAPTIONS_TEXT_SOURCE_NAME);
 	} else {
 		// set the text source name
 		gf->text_source_name = subtitle_sources;

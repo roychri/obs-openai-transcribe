@@ -21,25 +21,120 @@ caption track.
 - Caption output to a text source, `.txt`/`.srt` file, or embedded CEA-608 for
   YouTube/Twitch
 
+## Install
+
+The plugin is not released yet, so grab a CI build:
+
+1. Open the [Actions tab](https://github.com/roychri/obs-openai-transcribe/actions),
+   click the most recent green run, and download the
+   `obs-openai-transcribe-<version>-windows-x64-<hash>` artifact.
+2. Unzip it. Inside is an installer `.exe` plus a loose `obs-plugins/` and `data/` tree.
+3. Either run the installer, or copy the two folders over your OBS install so the files
+   land next to the ones already there:
+   ```
+   C:\Program Files\obs-studio\obs-plugins\64bit\obs-openai-transcribe.dll
+   C:\Program Files\obs-studio\data\obs-plugins\obs-openai-transcribe\
+   ```
+4. Restart OBS. If it loaded, `OpenAI Live Transcription` appears in the audio filter list
+   (step 3 below) and the log mentions the module by name.
+
+To uninstall, delete those two paths and restart OBS.
+
+## Get an API key
+
+1. Sign in at [platform.openai.com](https://platform.openai.com/api-keys) and create a
+   secret key.
+2. Make sure the account has billing set up — the key authenticates fine without it, but
+   the session will fail once audio starts flowing.
+3. Copy the key now; OpenAI will not show it again.
+
+## Set it up
+
+1. In OBS, find the audio source you want captioned — your mic under **Audio Mixer**, or
+   any source with audio.
+2. Click the **⚙ gear → Filters** next to it (or right-click the source → **Filters**).
+3. Under **Audio Filters**, click **+** and choose **OpenAI Live Transcription**. Give it
+   any name.
+4. Paste your key into **API Key**.
+5. Leave **Output source** on the default. The plugin creates a text source called
+   `OpenAI Captions` in your current scene and points at it, so captions are visible
+   immediately. Pick an existing text source instead if you already have one styled.
+6. Set **Language** to what will be spoken, or leave it for auto-detect.
+7. Click **Close**, then speak. Text should appear within about a second.
+
+The auto-created text source is a plain OBS text source — move, resize, restyle, or
+reposition it like any other. It is added to the scene that was active when the filter
+was created.
+
+## Settings reference
+
+### OpenAI options
+
+| Setting | What it does |
+|---|---|
+| **Latency** | Speed vs. stability. `minimal` shows words soonest but revises them more as the model reconsiders; `xhigh` waits longer and rewrites less. Measured first-word times: `minimal` 0.46 s, `low` 0.85–1.17 s, `high` 1.73 s. Default `low`. |
+| **Context** | A sentence or two about the stream — "a live Kerbal Space Program run with guest Marie". The model uses it to disambiguate; it is not an instruction. |
+| **Keywords** | Proper nouns the model would otherwise mangle — guest handles, game names, product SKUs, jargon. One per line. This is the single biggest accuracy lever. |
+| **Disconnect after idle** | Seconds of silence before the socket closes, to stop paying for an idle connection. Default 30. `0` keeps it open forever. |
+
+### General
+
+**Transcription provider** is `OpenAI (gpt-live-transcribe)` — the only one in this fork.
+**Secret Key** is unused by OpenAI; leave it blank.
+
+### Other groups
+
+**File output** writes captions to `.txt` or `.srt`, optionally only while recording, and
+can rename the file to match the recording. Note the SRT caveat under *Caption
+segmentation* below.
+
+**Advanced** has **Caption to stream** (embeds CEA-608 captions into the outgoing RTMP
+stream for YouTube/Twitch — off by default), min/max subtitle duration, and **Process
+while muted**, which keeps transcribing a muted source. Leaving that off is also what
+stops a muted mic from running up cost.
+
+**Partial transcription** controls whether in-progress lines are shown as you speak.
+
+**Logging** sets verbosity; see troubleshooting.
+
+**Translation** and **Timed metadata** are inherited from CloudVocal and are **not tested
+in this fork** — v1 is transcription only. Translation in particular needs its own
+separate API key for whichever service you pick.
+
+## Note on caption segmentation
+
+`gpt-live-transcribe` never emits a "transcription completed" event — it streams deltas
+into one transcript that grows for the life of the session. This plugin therefore decides
+where captions end itself: at sentence punctuation (ignoring `Dr.`, `3.5` and friends),
+after a 900 ms pause, or at a 240-character cap. Without that, stream captions and SRT
+output would never fire at all, since both are gated on a finalised line.
+
+## Troubleshooting
+
+OBS's log is at **Help → Log Files → View Current Log**, or
+`%APPDATA%\obs-studio\logs\`. Set **Log level** to `INFO` in the filter first.
+
+| What you see | What it means |
+|---|---|
+| No filter in the `+` list | Plugin did not load. Check the two install paths and that OBS is 64-bit. |
+| `OpenAI API key is empty` | Key field is blank — the socket is never opened. |
+| `Error connecting to OpenAI` | Bad key, no billing, or no network. The full message follows. |
+| `OpenAI realtime error: ...` | The API rejected the session; the message and code are logged verbatim. |
+| Nothing after `Connected to OpenAI realtime transcription` | Audio is not reaching the filter. Check the source is not muted, or enable **Process while muted**. |
+| Captions stop after a pause, resume later | Expected — the idle timeout closed the socket and the next audio reopens it. |
+
 ## Cost, and why the idle timeout matters
 
-`gpt-live-transcribe` bills **$0.017 per minute of session audio** — roughly **$1.02/hour**
-— and it bills by how long the socket is open, *not* by how much speech it hears.
+`gpt-live-transcribe` bills **$0.017 per minute of session audio** — about **$1.02/hour**
+— and it bills by **how long the socket is open, not how much speech it hears**. Silence
+costs the same as talking.
 
-This plugin therefore opens the connection lazily on first audio and drops it after
-`Disconnect after idle` seconds of silence (default 30). Set it to 0 to keep the socket
-open permanently, and expect to pay for every minute the filter is enabled.
-
-## Configuration
-
-1. Add **OpenAI Live Transcription** as a filter on an audio source
-2. Paste your OpenAI API key into **API Key**
-3. Pick a text source in **Output source** (one is created for you if you have none)
-4. Optionally fill in **Context** (what the stream is about) and **Keywords** (names,
-   games, jargon — one per line)
-
-The API key is stored by OBS in its scene-collection JSON in plain text, like every other
-OBS plugin credential. Treat that file accordingly.
+So the plugin opens the connection lazily on first audio and drops it after
+**Disconnect after idle** seconds of quiet. A 4-hour stream is roughly **$4** if the
+socket stays open throughout; the idle timeout is what makes a quiet stream cheaper.
+Setting it to `0` keeps the socket open permanently — expect to pay for every minute the
+filter is enabled. Watch real spend on the
+[OpenAI usage page](https://platform.openai.com/usage).
 
 ## Building
 
@@ -70,19 +165,17 @@ Build and deploy straight into OBS while developing:
 Linux and macOS build scripts are inherited from upstream and should still work, but are
 untested in this fork.
 
-## Note on caption segmentation
-
-`gpt-live-transcribe` never emits a "transcription completed" event — it streams deltas
-into one transcript that grows for the life of the session. This plugin therefore decides
-where captions end itself: at sentence punctuation (ignoring `Dr.`, `3.5` and friends),
-after a 900 ms pause, or at a 240-character cap. Without that, stream captions and SRT
-output would never fire at all, since both are gated on a finalised line.
-
 ## Status
 
 Builds green on CI (Windows x64 installer artifact), and the wire protocol is verified
-against the live API. **Not yet run inside OBS** - that is the next step. See
-`PLAN_OPENAI_FORK.md` for details and what remains.
+against the live API with real audio.
+
+**It has never been run inside OBS.** The setup steps and settings reference above are
+written from the source and the locale strings, so the control names are accurate, but
+the exact panel layout is inferred rather than observed. Expect small discrepancies until
+someone runs it, and please correct them.
+
+See `PLAN_OPENAI_FORK.md` for the API findings and what remains.
 
 ## License
 

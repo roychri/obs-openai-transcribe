@@ -4,6 +4,11 @@
 #include <media-io/audio-io.h>
 #include <obs.h>
 
+// Name of the text source auto-created for captions. Defined once because OBS source
+// lookups are case-sensitive: the creator and the filter's default target must agree
+// exactly, or the filter renders into a source that does not exist.
+#define CAPTIONS_TEXT_SOURCE_NAME "OpenAI Captions"
+
 // Get the current timestamp in milliseconds since epoch
 inline uint64_t now_ms()
 {
