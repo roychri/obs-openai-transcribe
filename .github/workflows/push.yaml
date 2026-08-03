@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - main
+      - openai-transcribe
       - 'release/**'
     tags:
       - '*'
@@ -16,7 +17,7 @@ concurrency:
 jobs:
   check-format:
     name: Check Formatting 🔍
-    if: github.ref_name == 'master'
+    if: github.ref_name == 'openai-transcribe'
     uses: ./.github/workflows/check-format.yaml
     permissions:
       contents: read
