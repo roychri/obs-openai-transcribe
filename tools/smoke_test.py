@@ -59,18 +59,18 @@ def build_session(args, keywords):
     if args.language:
         transcription["languages"] = [args.language]
 
+    audio_input = {
+        "format": {"type": "audio/pcm", "rate": SAMPLE_RATE},
+        "transcription": transcription,
+    }
+    if not args.keep_vad:
+        # Setting turn_detection to anything but null is rejected outright
+        # ("Turn detection is not supported for this transcription model").
+        audio_input["turn_detection"] = None
+
     return {
         "type": "session.update",
-        "session": {
-            "type": "transcription",
-            "audio": {
-                "input": {
-                    "format": {"type": "audio/pcm", "rate": SAMPLE_RATE},
-                    "transcription": transcription,
-                    "turn_detection": {"type": "server_vad"},
-                }
-            },
-        },
+        "session": {"type": "transcription", "audio": {"input": audio_input}},
     }
 
 
@@ -99,6 +99,7 @@ async def pump_audio(ws, pcm, realtime):
 
 async def read_events(ws, first_delta):
     partial = ""
+    item_id = None
     async for message in ws:
         event = json.loads(message)
         etype = event.get("type", "")
@@ -106,11 +107,17 @@ async def read_events(ws, first_delta):
         if etype == "conversation.item.input_audio_transcription.delta":
             if first_delta["at"] is None:
                 first_delta["at"] = time.monotonic()
+            if event.get("item_id") != item_id:
+                if item_id is not None:
+                    print(f"  [item {item_id} ended] {partial}")
+                item_id = event.get("item_id")
+                partial = ""
+                print(f"  [item {item_id} started]", file=sys.stderr)
             partial += event.get("delta", "")
-            print(f"\r  partial: {partial}", end="", flush=True)
+            print(f"  partial: {partial[-90:]}")
         elif etype == "conversation.item.input_audio_transcription.completed":
             text = event.get("transcript", partial)
-            print(f"\r  FINAL:   {text}")
+            print(f"  FINAL[{event.get('item_id')}]: {text}")
             partial = ""
         elif etype == "session.updated":
             print("[session configured]", file=sys.stderr)
@@ -121,7 +128,9 @@ async def read_events(ws, first_delta):
                 file=sys.stderr,
             )
         elif etype:
-            print(f"[{etype}]", file=sys.stderr)
+            # Dump anything unrecognised in full - this is how we learn the real
+            # finalisation signal rather than guessing at it.
+            print(f"[{etype}] {json.dumps(event)[:400]}", file=sys.stderr)
 
 
 async def main():
@@ -140,6 +149,17 @@ async def main():
         "--fast",
         action="store_true",
         help="send as fast as possible instead of pacing to real time",
+    )
+    ap.add_argument(
+        "--keep-vad",
+        action="store_true",
+        help="leave the session's default server_vad in place instead of nulling it",
+    )
+    ap.add_argument(
+        "--tail-wait",
+        type=float,
+        default=15.0,
+        help="seconds to keep reading after the audio ends",
     )
     args = ap.parse_args()
 
@@ -163,10 +183,7 @@ async def main():
     connect_started = time.monotonic()
     async with websockets.connect(
         WS_URL,
-        additional_headers={
-            "Authorization": f"Bearer {api_key}",
-            "OpenAI-Beta": "realtime=v1",
-        },
+        additional_headers={"Authorization": f"Bearer {api_key}"},
         max_size=None,
     ) as ws:
         await ws.send(json.dumps(build_session(args, keywords)))
@@ -178,7 +195,7 @@ async def main():
 
         # give the tail of the audio time to come back before tearing down
         try:
-            await asyncio.wait_for(reader, timeout=15)
+            await asyncio.wait_for(reader, timeout=args.tail_wait)
         except asyncio.TimeoutError:
             reader.cancel()
 

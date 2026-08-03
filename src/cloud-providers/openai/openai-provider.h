@@ -39,6 +39,12 @@ public:
 	static constexpr int kSampleRate = 24000;
 	int sampleRate() const override { return kSampleRate; }
 
+	// The model never emits a `completed` event and never rotates its item id: deltas
+	// accumulate into one ever-growing transcript. Captions are therefore segmented
+	// client-side, on sentence punctuation, on a pause, or on a hard length cap.
+	static constexpr int kFinalizeSilenceMs = 900;
+	static constexpr size_t kMaxPendingChars = 240;
+
 protected:
 	void sendAudioBufferToTranscription(const std::deque<float> &audio_buffer) override;
 	void readResultsFromTranscription() override;
@@ -52,6 +58,10 @@ private:
 	bool writeFrame(const std::string &payload);
 	void handleEvent(const std::string &message);
 	void emit(const std::string &text, bool final);
+	// Append new delta text and emit whatever captions that makes complete.
+	void appendDelta(const std::string &delta);
+	// Emit any buffered text as a final caption and clear the buffer.
+	void flushPending();
 
 	using WsStream = websocket::stream<beast::ssl_stream<tcp::socket>>;
 
@@ -69,8 +79,10 @@ private:
 	std::atomic<bool> connected;
 	std::chrono::steady_clock::time_point last_audio_sent;
 
-	// Deltas arrive per transcription item; accumulate so partial captions render
-	// as a growing line instead of disconnected fragments.
+	// Text accumulated since the last emitted caption. Written by the results thread
+	// (deltas) and read by the audio thread (silence flush), hence the mutex.
+	std::mutex pending_mutex;
+	std::string pending_text;
+	std::chrono::steady_clock::time_point last_delta;
 	std::string current_item_id;
-	std::string current_item_text;
 };

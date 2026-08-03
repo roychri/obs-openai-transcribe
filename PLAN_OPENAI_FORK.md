@@ -141,6 +141,38 @@ idle timeout that closes the WS after N seconds with no audio (source muted / sc
 inactive) and reconnects lazily on the next buffer. Also honour the existing
 `process_while_muted` flag by not opening the socket at all while muted.
 
+## Verified against the live API (2026-08-03)
+
+Run with `tools/smoke_test.py` against `nemotron-asr/sample1.wav` (13.7 s of speech).
+Transcription came back clean and accurate. Four things contradicted the plan as written:
+
+1. **`OpenAI-Beta: realtime=v1` is fatal.** The server closes with
+   `4000 invalid_request_error.beta_api_shape_disabled`. Send `Authorization` only. (That
+   header came from a March-2025 write-up, not the current docs.)
+2. **`turn_detection` must be `null`.** Any object — including the default `server_vad` —
+   is rejected with *"Turn detection is not supported for this transcription model"*, and
+   because that rejection fails the whole `session.update`, the session silently stays
+   unconfigured and you get VAD events but **no transcription at all**. Omitting the field
+   does not help either.
+3. **No `completed` event, ever.** Waited 40 s past end-of-audio: only
+   `...transcription.delta`, all under a single `item_id` that never rotates. The transcript
+   just grows. This is the big one — `set_text_callback` gates stream captions
+   (`cloudvocal-callbacks.cpp:266`) and file/SRT output (`:271`) on
+   `DETECTION_RESULT_SPEECH`, so with partials alone **RTMP captions and SRT would be
+   silently dead** and the text source would render one unbounded line.
+   → Provider now segments client-side: on sentence punctuation (with an abbreviation
+   guard and a 12-char minimum), on a 900 ms pause, or at a 240-char hard cap.
+4. **Latency to first word**, measured, since OpenAI publishes no figures:
+
+   | `delay` | time to first delta |
+   |---|---|
+   | `minimal` | 0.46 s |
+   | `low` | 0.85 – 1.17 s |
+   | `high` | 1.73 s |
+
+   Connect handshake is 0.3–0.7 s. Default is `low`; `minimal` is worth trying for live
+   captions if the extra revision churn is tolerable.
+
 ## Verification
 
 1. **CI**: green Windows build producing an installer artifact — the gate for everything else.

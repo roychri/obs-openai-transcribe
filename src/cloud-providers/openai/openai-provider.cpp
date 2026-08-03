@@ -3,6 +3,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <cstring>
 #include <sstream>
 #include <vector>
 
@@ -130,8 +131,11 @@ bool OpenAIProvider::connect()
 		const std::string api_key = gf->cloud_provider_api_key;
 		stream->set_option(websocket::stream_base::decorator(
 			[api_key](websocket::request_type &req) {
+				// Authorization only. Sending the old `OpenAI-Beta: realtime=v1`
+				// header gets the connection closed with 4000
+				// invalid_request_error.beta_api_shape_disabled (verified
+				// 2026-08-03).
 				req.set(http::field::authorization, "Bearer " + api_key);
-				req.set("OpenAI-Beta", "realtime=v1");
 			}));
 
 		stream->handshake(kHost, kTarget);
@@ -144,7 +148,11 @@ bool OpenAIProvider::connect()
 		}
 		connected = true;
 		current_item_id.clear();
-		current_item_text.clear();
+		{
+			std::lock_guard<std::mutex> lock(pending_mutex);
+			pending_text.clear();
+			last_delta = std::chrono::steady_clock::now();
+		}
 
 		if (!sendSessionUpdate()) {
 			disconnect("session.update failed");
@@ -202,9 +210,11 @@ bool OpenAIProvider::sendSessionUpdate()
 			   {{"input",
 			     {{"format", {{"type", "audio/pcm"}, {"rate", kSampleRate}}},
 			      {"transcription", transcription},
-			      // OBS has no turn boundaries of its own, so let the server
-			      // segment speech rather than committing turns manually.
-			      {"turn_detection", {{"type", "server_vad"}}}}}}}}}};
+			      // Verified 2026-08-03: any turn_detection object is rejected
+			      // with "Turn detection is not supported for this transcription
+			      // model" and the whole session.update fails, leaving the
+			      // session unconfigured and silent. It must be null.
+			      {"turn_detection", nullptr}}}}}}}};
 
 	return writeFrame(session.dump());
 }
@@ -296,24 +306,163 @@ void OpenAIProvider::handleEvent(const std::string &message)
 	if (type == "conversation.item.input_audio_transcription.delta") {
 		const std::string item_id = event.value("item_id", "");
 		if (item_id != current_item_id) {
+			// Not observed in practice - the model keeps one item for the whole
+			// session - but if it ever does rotate, close out the previous line.
+			flushPending();
 			current_item_id = item_id;
-			current_item_text.clear();
 		}
-		current_item_text += event.value("delta", "");
-		emit(current_item_text, false);
+		appendDelta(event.value("delta", ""));
 	} else if (type == "conversation.item.input_audio_transcription.completed") {
-		// The completed event carries the whole transcript; prefer it over our
-		// accumulated deltas, which may have missed a frame.
-		const std::string text = event.value("transcript", current_item_text);
-		emit(text, true);
+		// Not emitted by gpt-live-transcribe as of 2026-08. Handled anyway so the
+		// provider does the right thing if that changes, or on another model.
+		const std::string text = event.value("transcript", "");
+		if (!text.empty()) {
+			{
+				std::lock_guard<std::mutex> lock(pending_mutex);
+				pending_text.clear();
+			}
+			emit(text, true);
+		} else {
+			flushPending();
+		}
 		current_item_id.clear();
-		current_item_text.clear();
 	} else if (type == "error") {
 		const auto err = event.value("error", json::object());
 		obs_log(LOG_ERROR, "OpenAI realtime error: %s (%s)",
 			err.value("message", "unknown").c_str(), err.value("code", "").c_str());
 	} else if (type == "session.updated") {
 		obs_log(gf->log_level, "OpenAI session configured");
+	}
+}
+
+namespace {
+
+// Index just past the last sentence-ending punctuation in `s`, or npos.
+// ASCII plus the CJK full-width stops, which are what the model emits for those
+// languages; anything else falls through to the pause/length fallbacks.
+// Common abbreviations whose trailing period is not a sentence end. Without this a
+// caption splits after "Dr." and flashes a two-word line.
+bool endsWithAbbreviation(const std::string &s, size_t period_pos)
+{
+	static const char *abbrevs[] = {"mr",  "mrs", "ms",  "dr",   "st",  "jr",
+					"sr",  "vs",  "etc", "prof", "inc", "ltd",
+					"no",  "fig", "approx"};
+
+	size_t start = period_pos;
+	while (start > 0 && (isalpha((unsigned char)s[start - 1]) != 0)) {
+		start--;
+	}
+	std::string word = s.substr(start, period_pos - start);
+	for (char &c : word) {
+		c = (char)tolower((unsigned char)c);
+	}
+
+	for (const char *abbrev : abbrevs) {
+		if (word == abbrev) {
+			return true;
+		}
+	}
+	return false;
+}
+
+size_t lastSentenceEnd(const std::string &s)
+{
+	static const char *ascii_enders = ".!?";
+	// Don't cut a caption down to a fragment; below this we wait for more text.
+	static const size_t kMinSentenceChars = 12;
+	size_t best = std::string::npos;
+
+	for (size_t i = 0; i < s.size(); i++) {
+		if (strchr(ascii_enders, s[i]) != nullptr) {
+			// Require a following space so decimals ("3.5", "1.2.3") do not
+			// split mid-sentence on every digit.
+			if (i + 1 < s.size() && s[i + 1] != ' ') {
+				continue;
+			}
+			if (i + 1 < kMinSentenceChars) {
+				continue;
+			}
+			if (s[i] == '.' && endsWithAbbreviation(s, i)) {
+				continue;
+			}
+			best = i + 1;
+		}
+	}
+
+	// U+3002 IDEOGRAPHIC FULL STOP / U+FF01 / U+FF1F in UTF-8
+	static const char *wide_enders[] = {"\xE3\x80\x82", "\xEF\xBC\x81", "\xEF\xBC\x9F"};
+	for (const char *ender : wide_enders) {
+		size_t pos = s.rfind(ender);
+		if (pos != std::string::npos) {
+			const size_t end = pos + strlen(ender);
+			if (best == std::string::npos || end > best) {
+				best = end;
+			}
+		}
+	}
+
+	return best;
+}
+
+std::string trimmed(const std::string &s)
+{
+	const size_t start = s.find_first_not_of(" \t\r\n");
+	if (start == std::string::npos) {
+		return "";
+	}
+	const size_t end = s.find_last_not_of(" \t\r\n");
+	return s.substr(start, end - start + 1);
+}
+
+} // namespace
+
+void OpenAIProvider::appendDelta(const std::string &delta)
+{
+	if (delta.empty()) {
+		return;
+	}
+
+	std::string final_line, partial_line;
+	{
+		std::lock_guard<std::mutex> lock(pending_mutex);
+		pending_text += delta;
+		last_delta = std::chrono::steady_clock::now();
+
+		const size_t end = lastSentenceEnd(pending_text);
+		if (end != std::string::npos) {
+			// Close out every complete sentence, keep the tail as the partial.
+			final_line = trimmed(pending_text.substr(0, end));
+			pending_text = trimmed(pending_text.substr(end));
+			partial_line = pending_text;
+		} else if (pending_text.size() >= kMaxPendingChars) {
+			// Nothing punctuated it and it is getting long - cut it loose so the
+			// caption line cannot grow without bound over a multi-hour stream.
+			final_line = trimmed(pending_text);
+			pending_text.clear();
+		} else {
+			partial_line = trimmed(pending_text);
+		}
+	}
+
+	// Emit outside the lock: the callback runs the whole caption/translation path.
+	if (!final_line.empty()) {
+		emit(final_line, true);
+	}
+	if (!partial_line.empty()) {
+		emit(partial_line, false);
+	}
+}
+
+void OpenAIProvider::flushPending()
+{
+	std::string text;
+	{
+		std::lock_guard<std::mutex> lock(pending_mutex);
+		text = trimmed(pending_text);
+		pending_text.clear();
+	}
+	if (!text.empty()) {
+		emit(text, true);
 	}
 }
 
@@ -343,6 +492,26 @@ void OpenAIProvider::onIdleTick()
 		return;
 	}
 
+	// A trailing fragment that never got punctuated would otherwise sit as a partial
+	// forever - no stream caption, no SRT line. Finalise it once the speaker pauses.
+	{
+		bool stale = false;
+		{
+			std::lock_guard<std::mutex> lock(pending_mutex);
+			if (!pending_text.empty()) {
+				const auto since = std::chrono::duration_cast<
+							   std::chrono::milliseconds>(
+							   std::chrono::steady_clock::now() -
+							   last_delta)
+							   .count();
+				stale = since >= kFinalizeSilenceMs;
+			}
+		}
+		if (stale) {
+			flushPending();
+		}
+	}
+
 	const int timeout = gf->openai_idle_timeout_sec;
 	if (timeout <= 0) {
 		return; // user disabled the idle disconnect
@@ -363,6 +532,8 @@ void OpenAIProvider::disconnect(const char *reason)
 	}
 
 	obs_log(LOG_INFO, "Closing OpenAI connection (%s)", reason);
+	// Don't strand a half-finished caption when the socket drops.
+	flushPending();
 	// Clear the flag first so the read thread treats the resulting read failure as
 	// expected rather than an error.
 	connected = false;
