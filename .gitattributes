@@ -1,0 +1,19 @@
+# This repo arrived from upstream with mixed line endings - 12 CRLF files against 36 LF,
+# and no .gitattributes. That is a live hazard: any tool that reads and rewrites a file
+# without preserving newlines turns a three-line edit into a whole-file diff.
+#
+# Normalize everything to LF in the repository. MSVC and PowerShell both read LF fine.
+* text=auto eol=lf
+
+# Except Windows-native scripts, which stay CRLF in the working tree.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Never convert binaries.
+*.png binary
+*.ico binary
+*.zip binary
+*.exe binary
+*.dll binary
+*.pdb binary

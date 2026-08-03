@@ -10,6 +10,7 @@
 !/tools
 !PLAN_OPENAI_FORK.md
 !.clang-format
+!.gitattributes
 !.gersemirc
 !.gitignore
 !buildspec.json
