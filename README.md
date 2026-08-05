@@ -114,6 +114,11 @@ mid-stream.
 **Transcription provider** is `OpenAI (gpt-live-transcribe)` — the only one in this fork.
 **API Key** is your OpenAI secret key and is the only credential needed.
 
+**Caption lines shown** (1–3, default 2) is how many lines the caption source displays.
+The line being spoken renders at the bottom, with the last finished line(s) above it. At
+1, each new utterance replaces the previous one the moment it starts, which makes the end
+of a sentence hard to catch.
+
 (Builds before 2026-08-03 also showed a **Secret Key** field. That was inherited from
 CloudVocal, where providers like Naver Clova and AWS need a key/secret *pair*. OpenAI
 authenticates with a single bearer token, so the field did nothing and has been removed.)
@@ -136,6 +141,22 @@ stops a muted mic from running up cost.
 **Translation** and **Timed metadata** are inherited from CloudVocal and are **not tested
 in this fork** — v1 is transcription only. Translation in particular needs its own
 separate API key for whichever service you pick.
+
+## Captioning more than one person
+
+Add a separate filter to each audio source — but give each one **its own caption text
+source**. Two filters pointing at the same text source overwrite each other's text, so
+whoever spoke last wins and the display flickers rather than showing a conversation.
+
+Two caveats:
+
+- **Cost is per filter.** Each one opens its own connection, so two active filters run at
+  roughly **$2/hour**, not $1. The idle disconnect helps: a source nobody is speaking
+  into drops its socket after the timeout.
+- **Do not caption the same voice twice.** If your mic is also present in desktop audio,
+  filtering both pays twice to transcribe you.
+
+There is no built-in way to merge several speakers into one source with labels.
 
 ## Note on caption segmentation
 
@@ -215,13 +236,11 @@ untested in this fork.
 
 ## Status
 
-Builds green on CI (Windows x64 installer artifact), and the wire protocol is verified
-against the live API with real audio.
+**Working.** Confirmed end to end in OBS 32.2.1 on Windows: captions appear on screen as
+you speak.
 
-**It has never been run inside OBS.** The setup steps and settings reference above are
-written from the source and the locale strings, so the control names are accurate, but
-the exact panel layout is inferred rather than observed. Expect small discrepancies until
-someone runs it, and please correct them.
+Not yet exercised: SRT file output, CEA-608 embedding into a live stream, and the
+inherited Translation and Timed-metadata groups.
 
 See `PLAN_OPENAI_FORK.md` for the API findings and what remains.
 
