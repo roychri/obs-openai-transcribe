@@ -88,6 +88,16 @@ The auto-created text source is a plain OBS text source — move, resize, restyl
 reposition it like any other. It is added to the scene that was active when the filter
 was created.
 
+### Starting and stopping
+
+Transcription bills by how long the connection is open, so bind a key to it:
+**Settings → Hotkeys → Start/stop transcription**. It toggles the filter, which stops
+feeding audio and drops the socket within ~250 ms.
+
+Unbinding it, the equivalent is the filter's enable checkbox — but that lives in the
+Filters dialog of the *audio source*, which is not somewhere you want to go looking
+mid-stream.
+
 ## Settings reference
 
 ### OpenAI options
@@ -156,6 +166,8 @@ Other lines:
 | What you see | What it means |
 |---|---|
 | No filter in the `+` list | Plugin did not load. Check the two install paths and that OBS is 64-bit. |
+| `handshake: asio.ssl error [asio.ssl:-2147483646]` | TLS could not verify OpenAI's certificate. Almost always a missing `roots.pem` — confirm it sits at `data\obs-plugins\obs-openai-transcribe\roots.pem`. Windows has no OpenSSL trust store of its own, so this bundle is required, not optional. |
+| `roots.pem not found in the plugin data folder` | Same cause, caught earlier. The message names the path it expects. |
 | `Error connecting to OpenAI` | Bad key, no billing, or no network. The full message follows. |
 | Captions stop after a pause, resume later | Expected — the idle timeout closed the socket and the next audio reopens it. |
 
