@@ -33,7 +33,7 @@ extern struct obs_source_info cloudvocal_info;
 bool obs_module_load(void)
 {
 	obs_register_source(&cloudvocal_info);
-	obs_log(LOG_INFO, "plugin loaded successfully (version %s)", PLUGIN_VERSION);
+	obs_log(LOG_INFO, "plugin loaded successfully (version %s, build %s)", PLUGIN_VERSION, PLUGIN_BUILD_HASH);
 	return true;
 }
 

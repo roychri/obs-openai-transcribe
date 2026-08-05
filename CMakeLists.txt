@@ -7,6 +7,23 @@ project(${_name} VERSION ${_version})
 option(ENABLE_FRONTEND_API "Use obs-frontend-api for UI functionality" OFF)
 option(ENABLE_QT "Use Qt functionality" OFF)
 
+# Stamp the build with the commit it came from. Every build otherwise reports version
+# 0.1.0, which makes "is the new DLL actually loaded?" unanswerable from the log.
+find_package(Git QUIET)
+if(GIT_FOUND)
+  execute_process(
+    COMMAND "${GIT_EXECUTABLE}" rev-parse --short HEAD
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE PLUGIN_BUILD_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+  )
+endif()
+if(NOT PLUGIN_BUILD_HASH)
+  set(PLUGIN_BUILD_HASH "unknown")
+endif()
+message(STATUS "Build hash: ${PLUGIN_BUILD_HASH}")
+
 include(compilerconfig)
 include(defaults)
 include(helpers)
