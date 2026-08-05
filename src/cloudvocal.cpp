@@ -126,6 +126,11 @@ void cloudvocal_destroy(void *data)
 	signal_handler_t *sh_filter = obs_source_get_signal_handler(gf->context);
 	signal_handler_disconnect(sh_filter, "enable", enable_callback, gf);
 
+	if (gf->toggle_hotkey != OBS_INVALID_HOTKEY_ID) {
+		obs_hotkey_unregister(gf->toggle_hotkey);
+		gf->toggle_hotkey = OBS_INVALID_HOTKEY_ID;
+	}
+
 	obs_log(gf->log_level, "filter destroy");
 
 	if (gf->cloud_provider != nullptr) {
@@ -298,6 +303,7 @@ void *cloudvocal_create(obs_data_t *settings, obs_source_t *filter)
 	gf->rename_file_to_match_recording = obs_data_get_bool(settings, "rename_file_to_match_recording");
 	gf->process_while_muted = obs_data_get_bool(settings, "process_while_muted");
 	gf->initial_creation = true;
+	gf->toggle_hotkey = OBS_INVALID_HOTKEY_ID;
 
 	for (size_t i = 0; i < gf->channels; i++) {
 		gf->input_buffers[i].clear();
@@ -338,6 +344,26 @@ void *cloudvocal_create(obs_data_t *settings, obs_source_t *filter)
 	}
 
 	signal_handler_connect(sh_filter, "enable", enable_callback, gf);
+
+	// Bindable under Settings -> Hotkeys. Transcription bills by connection time, so a
+	// one-key stop matters more here than for a typical filter.
+	gf->toggle_hotkey = obs_hotkey_register_source(
+		filter, "OpenAITranscribe.Toggle", MT_("toggle_transcription_hotkey"),
+		[](void *data, obs_hotkey_id, obs_hotkey_t *, bool pressed) {
+			if (!pressed) {
+				return;
+			}
+			auto *d = static_cast<struct cloudvocal_data *>(data);
+			if (d == nullptr || d->context == nullptr) {
+				return;
+			}
+			const bool enable = !obs_source_enabled(d->context);
+			// Flipping the filter's enabled state fires the existing "enable"
+			// signal, which stops feeding audio and drops the socket.
+			obs_source_set_enabled(d->context, enable);
+			obs_log(LOG_INFO, "transcription %s by hotkey", enable ? "started" : "stopped");
+		},
+		gf);
 
 	obs_log(gf->log_level, "run update");
 	// get the settings updated on the filter data struct

@@ -51,6 +51,9 @@ struct cloudvocal_data {
 	bool initial_creation;
 	bool source_signals_set;
 	obs_source_t *context;
+	// Toggles the filter (and therefore the billed connection) without hunting
+	// through the Filters dialog of an audio source.
+	obs_hotkey_id toggle_hotkey;
 
 	size_t channels;
 	int sample_rate;

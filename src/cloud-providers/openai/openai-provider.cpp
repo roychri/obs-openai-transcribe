@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "cloudvocal-utils.h"
+#include "utils/ssl-utils.h"
 #include "language-codes/language-codes.h"
 
 using json = nlohmann::json;
@@ -101,7 +102,30 @@ bool OpenAIProvider::init()
 	}
 
 	ssl_ctx.set_verify_mode(ssl::verify_peer);
-	ssl_ctx.set_default_verify_paths();
+
+	// Load the CA bundle shipped in the plugin's data folder. set_default_verify_paths()
+	// is not enough on Windows: the Conan-built OpenSSL has no usable default trust
+	// store there, so every handshake failed with asio.ssl:-2147483646 before reaching
+	// the API. This bundle is exactly why upstream ships data/roots.pem.
+	const std::string ca_bundle = PEMrootCertsPath();
+	if (!ca_bundle.empty()) {
+		boost::system::error_code ec;
+		ssl_ctx.load_verify_file(ca_bundle, ec);
+		if (ec) {
+			obs_log(LOG_ERROR, "Failed to load CA bundle from %s: %s", ca_bundle.c_str(),
+				ec.message().c_str());
+			return false;
+		}
+		obs_log(gf->log_level, "loaded CA bundle from %s", ca_bundle.c_str());
+	} else {
+		obs_log(LOG_ERROR, "roots.pem not found in the plugin data folder - TLS will fail. "
+				   "Check data/obs-plugins/obs-openai-transcribe/roots.pem is installed.");
+		return false;
+	}
+
+	// Also consult the system store where one exists (Linux/macOS); harmless if absent.
+	boost::system::error_code ignored;
+	ssl_ctx.set_default_verify_paths(ignored);
 
 	// Deliberately do not connect here. The socket is opened on first audio so an
 	// enabled-but-silent filter does not bill.
