@@ -4,6 +4,8 @@
 #include <obs.h>
 #include <obs-frontend-api.h>
 
+#include "plugin-support.h"
+
 bool create_obs_text_source_if_needed()
 {
 	// check if the captions text source already exists
