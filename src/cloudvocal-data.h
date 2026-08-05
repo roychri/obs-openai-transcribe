@@ -82,6 +82,11 @@ struct cloudvocal_data {
 	std::string last_transcription_sentence;
 	// One-shot guard so a missing caption target warns once, not per caption.
 	bool warned_missing_text_source;
+	// How many lines the caption source shows: the in-progress line plus this many
+	// finished ones above it, so the end of a sentence stays readable while the next
+	// one is still being spoken.
+	int caption_lines;
+	std::deque<std::string> caption_history;
 	audio_resampler_t *resampler;
 	int min_sub_duration;
 	int max_sub_duration;

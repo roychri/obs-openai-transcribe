@@ -268,6 +268,9 @@ void add_general_group_properties(obs_properties_t *ppts)
 	// Add text sources
 	obs_enum_sources(add_sources_to_list, subs_output);
 
+	// How many caption lines to show at once.
+	obs_properties_add_int_slider(general_group, "caption_lines", MT_("caption_lines"), 1, 3, 1);
+
 	// Add language selector
 	obs_property_t *transcription_language_select_list =
 		obs_properties_add_list(general_group, "transcription_language_select", MT_("language"),
@@ -394,6 +397,7 @@ void cloudvocal_defaults(obs_data_t *s)
 	obs_data_set_default_string(s, "openai_keywords", "");
 	obs_data_set_default_int(s, "openai_idle_timeout", 30);
 	obs_data_set_default_string(s, "subtitle_sources", "none");
+	obs_data_set_default_int(s, "caption_lines", 2);
 	obs_data_set_default_bool(s, "process_while_muted", false);
 	obs_data_set_default_bool(s, "subtitle_save_srt", false);
 	obs_data_set_default_bool(s, "truncate_output_file", false);

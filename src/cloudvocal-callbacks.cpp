@@ -245,11 +245,40 @@ void set_text_callback(struct cloudvocal_data *gf, const DetectionResultWithText
 		}
 	}
 
+	// Keep the last few finished lines above the one still being spoken. Without this
+	// each new utterance overwrites the previous one the instant it starts, so the end
+	// of a sentence is gone before it can be read.
+	std::string rendered;
+	{
+		const size_t keep = gf->caption_lines > 1 ? (size_t)gf->caption_lines - 1 : 0;
+
+		if (result.result == DETECTION_RESULT_SPEECH) {
+			if (keep > 0) {
+				gf->caption_history.push_back(str_copy);
+				while (gf->caption_history.size() > keep) {
+					gf->caption_history.pop_front();
+				}
+			}
+		}
+
+		for (const auto &line : gf->caption_history) {
+			rendered += line;
+			rendered += "\n";
+		}
+		// A finished line has already moved into the history above, so appending it
+		// again here would show it twice.
+		if (result.result != DETECTION_RESULT_SPEECH) {
+			rendered += str_copy;
+		} else if (keep == 0) {
+			rendered = str_copy;
+		}
+	}
+
 	// send the original text to the output
 	// unless the translation is enabled and set to overwrite the original text
 	if (!((should_translate && gf->translation_output == "none"))) {
 		// non-buffered output - send the sentence to the selected source
-		send_caption_to_source(gf->text_source_name, str_copy, gf);
+		send_caption_to_source(gf->text_source_name, rendered, gf);
 	}
 
 	if (gf->caption_to_stream && result.result == DETECTION_RESULT_SPEECH) {
@@ -358,6 +387,7 @@ void recording_state_callback(enum obs_frontend_event event, void *data)
 
 void clear_current_caption(cloudvocal_data *gf_)
 {
+	gf_->caption_history.clear();
 	send_caption_to_source(gf_->text_source_name, "", gf_);
 	send_caption_to_source(gf_->translation_output, "", gf_);
 	// reset translation context
