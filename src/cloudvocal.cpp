@@ -221,8 +221,7 @@ void cloudvocal_update(void *data, obs_data_t *s)
 	std::string new_cloud_provider_api_key = obs_data_get_string(s, "transcription_cloud_provider_api_key");
 	std::string new_cloud_provider_selection = obs_data_get_string(s, "transcription_cloud_provider");
 
-	// OpenAI context options. These are baked into the session at connect time, so a
-	// change to any of them has to restart the provider to take effect.
+	// OpenAI context options. Pushed to the live session rather than reconnecting.
 	std::string new_openai_delay = obs_data_get_string(s, "openai_delay");
 	std::string new_openai_prompt = obs_data_get_string(s, "openai_prompt");
 	std::string new_openai_keywords = obs_data_get_string(s, "openai_keywords");
@@ -230,20 +229,31 @@ void cloudvocal_update(void *data, obs_data_t *s)
 	// Idle timeout is read live - it does not need a reconnect.
 	gf->openai_idle_timeout_sec = (int)obs_data_get_int(s, "openai_idle_timeout");
 
-	if (gf->cloud_provider_selection != new_cloud_provider_selection || gf->language != new_language ||
-	    gf->cloud_provider_api_key != new_cloud_provider_api_key || gf->openai_delay != new_openai_delay ||
-	    gf->openai_prompt != new_openai_prompt || gf->openai_keywords != new_openai_keywords) {
-		// cloud provider selection, api key or session options changed
-		obs_log(gf->log_level, "cloud provider selection, language, keys or options changed");
+	// OBS calls update() on every keystroke. Restarting the provider here joins two
+	// threads and tears down a socket, which froze the UI one letter at a time while
+	// typing into Context. These options go to the open session instead.
+	const bool session_opts_changed = gf->openai_delay != new_openai_delay ||
+					  gf->openai_prompt != new_openai_prompt ||
+					  gf->openai_keywords != new_openai_keywords;
+	gf->openai_delay = new_openai_delay;
+	gf->openai_prompt = new_openai_prompt;
+	gf->openai_keywords = new_openai_keywords;
+
+	// A different provider, language or credential cannot be applied to an open
+	// socket, so those still reconnect.
+	const bool reconnect_needed = gf->cloud_provider_selection != new_cloud_provider_selection ||
+				      gf->language != new_language ||
+				      gf->cloud_provider_api_key != new_cloud_provider_api_key;
+
+	if (reconnect_needed) {
+		obs_log(gf->log_level, "provider, language or key changed - restarting");
 		gf->cloud_provider_selection = new_cloud_provider_selection;
 		gf->language = new_language;
 		gf->cloud_provider_api_key = new_cloud_provider_api_key;
-		gf->openai_delay = new_openai_delay;
-		gf->openai_prompt = new_openai_prompt;
-		gf->openai_keywords = new_openai_keywords;
 
-		// restart the cloud provider
 		restart_cloud_provider(gf);
+	} else if (session_opts_changed && gf->cloud_provider != nullptr) {
+		gf->cloud_provider->onConfigChanged();
 	}
 
 	// Update timed metadata options

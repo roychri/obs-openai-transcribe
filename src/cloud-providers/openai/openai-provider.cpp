@@ -80,6 +80,7 @@ OpenAIProvider::OpenAIProvider(TranscriptionCallback callback, cloudvocal_data *
 	  resolver(ioc),
 	  ws(nullptr),
 	  connected(false),
+	  session_dirty(false),
 	  last_audio_sent(std::chrono::steady_clock::now())
 {
 	needs_results_thread = true;
@@ -150,6 +151,7 @@ bool OpenAIProvider::connect()
 			last_delta = std::chrono::steady_clock::now();
 		}
 
+		session_dirty = false;
 		if (!sendSessionUpdate()) {
 			disconnect("session.update failed");
 			return false;
@@ -242,6 +244,8 @@ void OpenAIProvider::sendAudioBufferToTranscription(const std::deque<float> &aud
 		std::this_thread::sleep_for(std::chrono::seconds(2));
 		return;
 	}
+
+	applyConfigIfDirty();
 
 	std::vector<int16_t> pcm;
 	pcm.reserve(audio_buffer.size());
@@ -478,11 +482,37 @@ void OpenAIProvider::emit(const std::string &text, bool final)
 	transcription_callback(result);
 }
 
+void OpenAIProvider::onConfigChanged()
+{
+	// Only a flag. Reconnecting here would stall OBS's UI thread on every keystroke.
+	session_dirty = true;
+}
+
+void OpenAIProvider::applyConfigIfDirty()
+{
+	if (!connected || !session_dirty.exchange(false)) {
+		return;
+	}
+	// Verified 2026-08-05: the API accepts session.update mid-session, so context,
+	// keywords and latency can change without dropping the socket.
+	obs_log(gf->log_level, "pushing updated session config");
+	sendSessionUpdate();
+}
+
 void OpenAIProvider::onIdleTick()
 {
+	// The filter was switched off - drop the billed socket now rather than waiting out
+	// the idle timeout.
+	if (connected && !gf->active) {
+		disconnect("filter disabled");
+		return;
+	}
+
 	if (!connected) {
 		return;
 	}
+
+	applyConfigIfDirty();
 
 	// A trailing fragment that never got punctuated would otherwise sit as a partial
 	// forever - no stream caption, no SRT line. Finalise it once the speaker pauses.

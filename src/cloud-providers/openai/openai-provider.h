@@ -51,11 +51,16 @@ protected:
 	void onIdleTick() override;
 	void shutdown() override;
 
+public:
+	void onConfigChanged() override;
+
+private:
 private:
 	bool connect();
 	void disconnect(const char *reason);
 	bool sendSessionUpdate();
 	bool writeFrame(const std::string &payload);
+	void applyConfigIfDirty();
 	void handleEvent(const std::string &message);
 	void emit(const std::string &text, bool final);
 	// Append new delta text and emit whatever captions that makes complete.
@@ -77,6 +82,8 @@ private:
 
 	std::mutex ws_mutex;
 	std::atomic<bool> connected;
+	// Set from the UI thread when settings change; acted on by the audio thread.
+	std::atomic<bool> session_dirty;
 	std::chrono::steady_clock::time_point last_audio_sent;
 
 	// Text accumulated since the last emitted caption. Written by the results thread

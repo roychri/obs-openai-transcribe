@@ -382,7 +382,9 @@ void cloudvocal_defaults(obs_data_t *s)
 {
 	obs_log(LOG_DEBUG, "filter defaults");
 
-	obs_data_set_default_int(s, "log_level", LOG_DEBUG);
+	// INFO, not DEBUG: OBS discards DEBUG, which silently hid every diagnostic this
+	// plugin logs about connecting and transcribing.
+	obs_data_set_default_int(s, "log_level", LOG_INFO);
 	obs_data_set_default_bool(s, "log_words", false);
 	obs_data_set_default_bool(s, "caption_to_stream", false);
 	obs_data_set_default_string(s, "transcription_language_select", "__en__");

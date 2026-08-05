@@ -67,6 +67,13 @@ protected:
 	// bill by connection wall-clock use this to drop an idle connection.
 	virtual void onIdleTick() {}
 
+public:
+	// Settings changed while running. Must NOT block: this is called from the UI thread
+	// on every keystroke in a text field, so implementations should only set a flag and
+	// do the work on their own thread.
+	virtual void onConfigChanged() {}
+
+protected:
 	void processAudio()
 	{
 		// Initialize the cloud provider
