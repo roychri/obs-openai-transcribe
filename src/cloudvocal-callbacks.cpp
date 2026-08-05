@@ -292,6 +292,20 @@ void set_text_callback(struct cloudvocal_data *gf, const DetectionResultWithText
 void recording_state_callback(enum obs_frontend_event event, void *data)
 {
 	struct cloudvocal_data *gf_ = static_cast<struct cloudvocal_data *>(data);
+	if (event == OBS_FRONTEND_EVENT_FINISHED_LOADING || event == OBS_FRONTEND_EVENT_SCENE_CHANGED) {
+		// Filters are created during scene-collection load, before any scene exists, so
+		// the caption source could not be made then. Now there is a scene.
+		if (gf_->text_source_name == CAPTIONS_TEXT_SOURCE_NAME) {
+			obs_source_t *existing = obs_get_source_by_name(CAPTIONS_TEXT_SOURCE_NAME);
+			if (existing != nullptr) {
+				obs_source_release(existing);
+			} else if (create_obs_text_source_if_needed()) {
+				obs_log(LOG_INFO, "created caption source '%s'", CAPTIONS_TEXT_SOURCE_NAME);
+				gf_->warned_missing_text_source = false;
+			}
+		}
+		return;
+	}
 	if (event == OBS_FRONTEND_EVENT_RECORDING_STARTING) {
 		if (gf_->save_srt && gf_->save_only_while_recording && gf_->output_file_path != "") {
 			obs_log(gf_->log_level, "Recording started. Resetting srt file.");

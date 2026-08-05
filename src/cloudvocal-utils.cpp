@@ -4,24 +4,33 @@
 #include <obs.h>
 #include <obs-frontend-api.h>
 
-void create_obs_text_source_if_needed()
+bool create_obs_text_source_if_needed()
 {
 	// check if the captions text source already exists
 	obs_source_t *source = obs_get_source_by_name(CAPTIONS_TEXT_SOURCE_NAME);
 	if (source) {
 		// source already exists, release it
 		obs_source_release(source);
-		return;
+		return true;
 	}
 
 	// create the captions text source
+	// During scene-collection load there is no current scene. Creating the source here
+	// would leave obs_scene_add() with nowhere to put it, and the release below would
+	// then drop the last reference and destroy it - which is exactly how the caption
+	// target came to "not exist" while the plugin reported creating it.
 	obs_source_t *scene_as_source = obs_frontend_get_current_scene();
+	if (scene_as_source == nullptr) {
+		obs_log(LOG_INFO, "no current scene yet - deferring caption source creation");
+		return false;
+	}
 	obs_scene_t *scene = obs_scene_from_source(scene_as_source);
 #ifdef _WIN32
 	source = obs_source_create("text_gdiplus_v3", CAPTIONS_TEXT_SOURCE_NAME, nullptr, nullptr);
 #else
 	source = obs_source_create("text_ft2_source_v2", CAPTIONS_TEXT_SOURCE_NAME, nullptr, nullptr);
 #endif
+	bool created = false;
 	if (source) {
 		// add source to the current scene. The returned item is owned by the scene,
 		// so it must not be released - unlike the deprecated
@@ -63,9 +72,13 @@ void create_obs_text_source_if_needed()
 			obs_sceneitem_set_info2(source_sceneitem, &transform_info);
 		}
 
+		// Success means it actually landed in a scene. Without a scene item nothing
+		// holds a reference and the release below destroys it again.
+		created = source_sceneitem != nullptr;
 		obs_source_release(source);
 	}
 	obs_source_release(scene_as_source);
+	return created;
 }
 
 bool add_sources_to_list(void *list_property, obs_source_t *source)

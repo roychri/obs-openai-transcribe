@@ -276,7 +276,11 @@ void cloudvocal_update(void *data, obs_data_t *s)
 			gf->active = true;
 			gf->initial_creation = false;
 
-			restart_cloud_provider(gf);
+			// Only if the block above did not already start one. Restarting twice
+			// opened and tore down a second billed connection on every create.
+			if (!reconnect_needed) {
+				restart_cloud_provider(gf);
+			}
 		}
 	} else {
 		obs_log(LOG_INFO, "Filter not enabled.");
@@ -364,6 +368,17 @@ void *cloudvocal_create(obs_data_t *settings, obs_source_t *filter)
 			obs_log(LOG_INFO, "transcription %s by hotkey", enable ? "started" : "stopped");
 		},
 		gf);
+
+	if (gf->toggle_hotkey == OBS_INVALID_HOTKEY_ID) {
+		obs_log(LOG_WARNING, "failed to register the start/stop transcription hotkey");
+	} else {
+		// Shown in Settings -> Hotkeys grouped under the *filter's* name, not under a
+		// heading of its own, which is not where people look for it.
+		obs_log(LOG_INFO,
+			"registered start/stop hotkey (id %llu) - bind it in Settings > Hotkeys "
+			"under this filter's name",
+			(unsigned long long)gf->toggle_hotkey);
+	}
 
 	obs_log(gf->log_level, "run update");
 	// get the settings updated on the filter data struct
