@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <chrono>
 #include <thread>
 #include <atomic>
 #include <vector>
@@ -125,6 +126,15 @@ protected:
 
 	void processResults()
 	{
+		// start() spawns this thread alongside processAudio, but `running` is only set
+		// once processAudio's init() has finished. Without this wait the loop below
+		// sees running == false, exits immediately, and the socket is never read - so
+		// audio streams out fine while every response, including session.updated and
+		// every transcript delta, is silently discarded.
+		while (!running && !stop_requested) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+
 		while (running && !stop_requested) {
 			readResultsFromTranscription();
 		}
