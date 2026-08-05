@@ -140,13 +140,23 @@ output would never fire at all, since both are gated on a finalised line.
 OBS's log is at **Help → Log Files → View Current Log**, or
 `%APPDATA%\obs-studio\logs\`. Set **Log level** to `INFO` in the filter first.
 
+The plugin logs a checkpoint at each stage. Find the **last** one present and read the
+row below it — that is where the pipeline stopped.
+
+| Log line | Reached | If it is the last one you see |
+|---|---|---|
+| `OpenAI provider ready (model …)` | Filter constructed | Key is blank, or the filter is disabled. A blank key also logs `OpenAI API key is empty`. |
+| `Connected to OpenAI realtime transcription` | Socket open | Audio is not reaching the provider. Check the source is not muted, that the filter is enabled, and try **Process while muted**. |
+| `audio is reaching OpenAI` | Audio streaming | The model is not returning anything. Look for `OpenAI realtime error:` — the API's message and code are logged verbatim. |
+| `first transcript received from OpenAI` | Transcribing | Text is being produced but not rendered. Look for the `caption target source … does not exist` warning below. |
+| `caption target source '<name>' does not exist` | — | **Output source** points at a text source that is not in the scene, or was renamed. Re-pick it in the filter settings. |
+
+Other lines:
+
 | What you see | What it means |
 |---|---|
 | No filter in the `+` list | Plugin did not load. Check the two install paths and that OBS is 64-bit. |
-| `OpenAI API key is empty` | Key field is blank — the socket is never opened. |
 | `Error connecting to OpenAI` | Bad key, no billing, or no network. The full message follows. |
-| `OpenAI realtime error: ...` | The API rejected the session; the message and code are logged verbatim. |
-| Nothing after `Connected to OpenAI realtime transcription` | Audio is not reaching the filter. Check the source is not muted, or enable **Process while muted**. |
 | Captions stop after a pause, resume later | Expected — the idle timeout closed the socket and the next audio reopens it. |
 
 ## Cost, and why the idle timeout matters

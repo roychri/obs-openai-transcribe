@@ -84,6 +84,9 @@ private:
 	std::atomic<bool> connected;
 	// Set from the UI thread when settings change; acted on by the audio thread.
 	std::atomic<bool> session_dirty;
+	// One-shot per connection, so the log shows how far the pipeline got.
+	std::atomic<bool> logged_first_audio;
+	std::atomic<bool> logged_first_delta;
 	std::chrono::steady_clock::time_point last_audio_sent;
 
 	// Text accumulated since the last emitted caption. Written by the results thread

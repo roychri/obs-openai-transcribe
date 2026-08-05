@@ -81,6 +81,8 @@ OpenAIProvider::OpenAIProvider(TranscriptionCallback callback, cloudvocal_data *
 	  ws(nullptr),
 	  connected(false),
 	  session_dirty(false),
+	  logged_first_audio(false),
+	  logged_first_delta(false),
 	  last_audio_sent(std::chrono::steady_clock::now())
 {
 	needs_results_thread = true;
@@ -152,6 +154,8 @@ bool OpenAIProvider::connect()
 		}
 
 		session_dirty = false;
+		logged_first_audio = false;
+		logged_first_delta = false;
 		if (!sendSessionUpdate()) {
 			disconnect("session.update failed");
 			return false;
@@ -261,6 +265,9 @@ void OpenAIProvider::sendAudioBufferToTranscription(const std::deque<float> &aud
 
 	if (writeFrame(frame.dump())) {
 		last_audio_sent = std::chrono::steady_clock::now();
+		if (!logged_first_audio.exchange(true)) {
+			obs_log(LOG_INFO, "audio is reaching OpenAI");
+		}
 	}
 }
 
@@ -308,6 +315,9 @@ void OpenAIProvider::handleEvent(const std::string &message)
 			// session - but if it ever does rotate, close out the previous line.
 			flushPending();
 			current_item_id = item_id;
+		}
+		if (!logged_first_delta.exchange(true)) {
+			obs_log(LOG_INFO, "first transcript received from OpenAI");
 		}
 		appendDelta(event.value("delta", ""));
 	} else if (type == "conversation.item.input_audio_transcription.completed") {

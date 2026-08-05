@@ -28,9 +28,18 @@ void send_caption_to_source(const std::string &target_source_name, const std::st
 	}
 	auto target = obs_get_source_by_name(target_source_name.c_str());
 	if (!target) {
-		obs_log(gf->log_level, "text_source target is null");
+		// Silent until now, and it is the failure that looks exactly like "the API
+		// is broken": transcription works fine, the text just has nowhere to land.
+		if (!gf->warned_missing_text_source) {
+			gf->warned_missing_text_source = true;
+			obs_log(LOG_WARNING,
+				"caption target source '%s' does not exist - captions are being "
+				"produced but have nowhere to render",
+				target_source_name.c_str());
+		}
 		return;
 	}
+	gf->warned_missing_text_source = false;
 	auto text_settings = obs_source_get_settings(target);
 	obs_data_set_string(text_settings, "text", caption.c_str());
 	obs_source_update(target, text_settings);

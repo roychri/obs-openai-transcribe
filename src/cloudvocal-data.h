@@ -77,6 +77,8 @@ struct cloudvocal_data {
 	uint64_t last_sub_render_time;
 	bool cleared_last_sub;
 	std::string last_transcription_sentence;
+	// One-shot guard so a missing caption target warns once, not per caption.
+	bool warned_missing_text_source;
 	audio_resampler_t *resampler;
 	int min_sub_duration;
 	int max_sub_duration;
